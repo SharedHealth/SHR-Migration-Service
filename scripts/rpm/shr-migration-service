@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# shr-migration-service        start/stop/status script
+#
+# chkconfig: - 64 36
+# description: The shr-migration-service shared health record system
+# processname: shr-migration-service
+# config: /etc/default/shr-migration-service
+# pidfile: /var/run/shr-migration-service/shr-migration-service.pid
+### BEGIN INIT INFO
+# Provides: shr-migration-service
+# Required-Start: $local_fs $remote_fs $network $named $syslog $time
+# Required-Stop: $local_fs $remote_fs $network $named $syslog $time
+# Short-Description: start and stop shr-migration-service system,
+# Description: BDSHR system
+### END INIT INFO
+
+export MIGRATION_SERVICE_USER=sharedhealth
+export MIGRATION_SERVICE_RUN=/opt/shr-migration-service/bin/start.sh
+export CUR_USER=`/usr/bin/whoami`
+
+# load configuration
+. /etc/default/shr-migration-service
+
+create_dirs() {
+    if [[ ! -e /var/run/shr-migration-service ]]; then
+        ln -s /opt/shr-migration-service/var /var/run/shr-migration-service
+    fi
+
+    if [[ ! -e /var/log/shr-migration-service ]]; then
+        mkdir /var/log/shr-migration-service
+    fi
+}
+shr_migration_service_pid() {
+        echo `ps -fe | grep "shr-migration-service.jar" | grep -v grep | tr -s " "|cut -d" " -f2`
+}
+
+start(){
+    pid=$(shr_migration_service_pid)
+    if [ -n "$pid" ]
+    then
+        echo -e "\e[00;31mService shr-migration-service is already running (pid: $pid)\e[00m"
+    else
+        # Start shr-migration-service
+        create_dirs
+        echo -e "\e[00;32mStarting shr-migration-service\e[00m"
+        if [ `user_exists $SHR_MIGRATION_SERVICE_USER` = "1" ]  && [ "$CUR_USER" != "$SHR_MIGRATION_SERVICE_USER" ] ;
+        then
+                /bin/su $SHR_MIGRATION_SERVICE_USER -c $SHR_MIGRATION_SERVICE_RUN
+        else
+                sh $SHR_MIGRATION_SERVICE_RUN
+        fi
+  fi
+  return 0
+}
+status(){
+          pid=$(shr_migration_service_pid)
+          if [ -n "$pid" ]; then echo -e "\e[00;32mService shr-migration-service is running with pid: $pid\e[00m"
+          else echo -e "\e[00;31mService shr-migration-service is not running\e[00m"
+          fi
+}
+
+stop() {
+	echo -e "\e[00;31mTerminating shr-migration-service\e[00m"
+	kill -9 $(shr_migration_service_pid)
+}
+user_exists(){
+        if id -u $1 >/dev/null 2>&1; then
+        echo "1"
+        else
+                echo "0"
+        fi
+}
+
+case $1 in
+	start)
+	  start
+	;;
+	stop)
+	  stop
+	;;
+	restart)
+	  stop
+	  start
+	;;
+	status)
+		status
+	;;
+	kill)
+		stop
+	;;
+	*)
+
+	;;
+esac
+exit 0

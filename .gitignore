@@ -1,0 +1,22 @@
+#Gradle directories
+.gradle/
+
+#Idea directories
+.idea/
+*.iml
+*.ipr
+*.iws
+
+#Build dirs
+build/
+out/
+classes/
+target/
+
+#Test Directory
+
+#OSX specific files
+.DS_Store
+
+#zip files
+*.zip
