@@ -15,8 +15,8 @@
 # Description: BDSHR system
 ### END INIT INFO
 
-export MIGRATION_SERVICE_USER=sharedhealth
-export MIGRATION_SERVICE_RUN=/opt/shr-migration-service/bin/start.sh
+export SHR_MIGRATION_SERVICE_USER=sharedhealth
+export SHR_MIGRATION_SERVICE_RUN=/opt/shr-migration-service/bin/start.sh
 export CUR_USER=`/usr/bin/whoami`
 
 # load configuration

@@ -1,3 +1,3 @@
 #!/bin/sh
-nohup java -jar /opt/mci-background-jobs/lib/mci-background-jobs.jar >  /dev/null 2>&1 &
-echo $! > /var/run/mci-background-jobs/mci-background-jobs.pid
+nohup java -jar /opt/shr-migration-service/lib/shr-migration-service.jar >  /dev/null 2>&1 &
+echo $! > /var/run/shr-migration-service/shr-migration-service.pid

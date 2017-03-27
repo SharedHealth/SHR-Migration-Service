@@ -1,5 +1,7 @@
 package org.sharedhealth.migrationService.launch;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.sharedhealth.migrationService.config.ShrProperties;
 
 import java.util.concurrent.Executors;
@@ -10,6 +12,9 @@ public class Main {
 
     private static ShrProperties shrProperties ;
 
+    private static final Logger logger = LogManager.getLogger(Main.class);
+
+
     private static void createTaskScheduler() {
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
@@ -18,7 +23,7 @@ public class Main {
 
     public static void main(String[] args) {
         shrProperties = ShrProperties.getInstance();
-        System.out.println("started: " + shrProperties.getShrUrl());
+        logger.info("started: " + shrProperties.getShrUrl());
         createTaskScheduler();
     }
 }

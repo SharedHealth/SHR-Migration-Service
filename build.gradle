@@ -1,5 +1,4 @@
 group 'shr-migration-service'
-version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'rpm'
@@ -129,7 +128,7 @@ test {
     environment localEnv
 }
 
-task runMigration(type: JavaExec) {
+task runSHRMigration(type: JavaExec) {
     Properties properties = new Properties();
     properties.load(new FileInputStream(new File('env/local.properties')))
     main = mainClassName
@@ -137,7 +136,7 @@ task runMigration(type: JavaExec) {
     environment properties
 }
 
-task debugMigration(type: JavaExec) {
+task debugSHRMigration(type: JavaExec) {
     Properties properties = new Properties();
     properties.load(new FileInputStream(new File('env/local.properties')))
     main = mainClassName
