@@ -8,7 +8,7 @@ public class ShrProperties {
 
     public ShrProperties() {
         Map<String, String> env = System.getenv();
-        this.shrUrl = env.get("SHR_URL");
+        this.shrUrl = env.get("SHR_SERVER_BASE_URL");
     }
 
     public static ShrProperties getInstance() {
@@ -17,7 +17,7 @@ public class ShrProperties {
         return shrProperties;
     }
 
-    public String getShrUrl() {
+    public String getShrServerBaseUrl() {
         return shrUrl;
     }
 }

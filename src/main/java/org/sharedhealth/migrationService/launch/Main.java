@@ -23,7 +23,7 @@ public class Main {
 
     public static void main(String[] args) {
         shrProperties = ShrProperties.getInstance();
-        logger.info("started: " + shrProperties.getShrUrl());
+        logger.info("started: shr server base url is " + shrProperties.getShrServerBaseUrl());
         createTaskScheduler();
     }
 }
