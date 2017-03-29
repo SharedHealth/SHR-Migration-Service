@@ -3,6 +3,7 @@ package org.sharedhealth.migrationService.launch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sharedhealth.migrationService.config.ShrProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -10,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
+    @Autowired
     private static ShrProperties shrProperties ;
 
     private static final Logger logger = LogManager.getLogger(Main.class);
@@ -22,7 +24,6 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        shrProperties = ShrProperties.getInstance();
         logger.info("started: shr server base url is " + shrProperties.getShrServerBaseUrl());
         createTaskScheduler();
     }
