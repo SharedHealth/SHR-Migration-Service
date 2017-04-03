@@ -51,7 +51,6 @@ public class WebClient {
                         HttpEntity entity = response.getEntity();
                         return entity != null ? parseContentInputAsString(entity) : null;
                     } else if (status == 404) {
-                        System.out.println("hdgdfjgdgh");
                         return null;
                     } else if (status == 401) {
                         throw new ConnectionException("Unauthorized request", 401, null);
