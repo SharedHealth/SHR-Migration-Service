@@ -114,7 +114,7 @@
                 </encounter>
                 <medicationCodeableConcept>
                     <coding>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/drugs/d2d9213f-878d-11e5-95dd-005056b0145c"/>
+                        <system value="http://tr.com"/>
                         <code value="d2d9213f-878d-11e5-95dd-005056b0145c"/>
                         <display value="Paracetamol Tablet 500 mg"/>
                     </coding>
@@ -144,14 +144,14 @@
                     <asNeededBoolean value="false"/>
                     <route>
                         <coding>
-                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Route-of-Administration"/>
+                            <system value="http://tr.com"/>
                             <code value="_OralRoute"/>
                             <display value="OralRoute"/>
                         </coding>
                     </route>
                     <doseQuantity>
                         <unit value="Tablet dose form"/>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Medication-Forms"/>
+                        <system value="http://tr.com"/>
                         <code value="385055001"/>
                     </doseQuantity>
                 </dosageInstruction>
@@ -164,9 +164,7 @@
                 <priorPrescription>
                     <reference value="urn:uuid:1c626241-674b-4ba3-baac-fcb7769d6555"/>
                 </priorPrescription>
-                <notes>
-                    <text value="Some Notes"/>
-                </notes>
+                <note value="Some Notes"/>
             </MedicationOrder>
         </resource>
     </entry>
@@ -194,7 +192,7 @@
                 </encounter>
                 <medicationCodeableConcept>
                     <coding>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/drugs/d2d98d73-878d-11e5-95dd-005056b0145c"/>
+                        <system value="http://tr.com"/>
                         <code value="d2d98d73-878d-11e5-95dd-005056b0145c"/>
                         <display value="Paracetamol Suspension (120 mg/ 5 ml) 60 ml"/>
                     </coding>
@@ -218,7 +216,7 @@
                     <asNeededBoolean value="false"/>
                     <route>
                         <coding>
-                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Route-of-Administration"/>
+                            <system value="http://tr.com"/>
                             <code value="_OralRoute"/>
                             <display value="OralRoute"/>
                         </coding>
@@ -226,7 +224,7 @@
                     <doseQuantity>
                         <value value="1"/>
                         <unit value="Teaspoonful - unit of product"/>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Medication-Package-Forms"/>
+                        <system value="http://tr.com"/>
                         <code value="415703001"/>
                     </doseQuantity>
                 </dosageInstruction>
@@ -236,9 +234,7 @@
                         <unit value="Teaspoonful - unit of product"/>
                     </quantity>
                 </dispenseRequest>
-                <notes>
-                    <text value="Some Notes"/>
-                </notes>
+                <note value="Some Notes"/>
             </MedicationOrder>
         </resource>
     </entry>
@@ -267,7 +263,7 @@
                 </encounter>
                 <medicationCodeableConcept>
                     <coding>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/drugs/d2d9213f-878d-11e5-95dd-005056b0145c"/>
+                        <system value="http://tr.com"/>
                         <code value="d2d9213f-878d-11e5-95dd-005056b0145c"/>
                         <display value="Paracetamol Tablet 500 mg"/>
                     </coding>
@@ -297,14 +293,14 @@
                     <asNeededBoolean value="false"/>
                     <route>
                         <coding>
-                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Route-of-Administration"/>
+                            <system value="http://tr.com"/>
                             <code value="_OralRoute"/>
                             <display value="OralRoute"/>
                         </coding>
                     </route>
                     <doseQuantity>
                         <unit value="Tablet dose form"/>
-                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/vs/Medication-Forms"/>
+                        <system value="http://tr.com"/>
                         <code value="385055001"/>
                     </doseQuantity>
                 </dosageInstruction>
@@ -314,9 +310,7 @@
                         <unit value="Tablet dose form"/>
                     </quantity>
                 </dispenseRequest>
-                <notes>
-                    <text value="Some Notes"/>
-                </notes>
+                <note value="Some Notes"/>
             </MedicationOrder>
         </resource>
     </entry>

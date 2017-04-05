@@ -4,9 +4,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.dstu3.model.*;
-import org.junit.Before;
+import org.hl7.fhir.dstu3.model.MedicationRequest.MedicationRequestStatus;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -21,6 +21,7 @@ import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.PRO
 import static org.hl7.fhir.dstu3.model.Encounter.EncounterStatus.FINISHED;
 import static org.hl7.fhir.dstu3.model.Observation.ObservationStatus.PRELIMINARY;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.SUSPENDED;
+import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
 
 public class AllResourceConverterTest {
@@ -271,7 +272,7 @@ public class AllResourceConverterTest {
         Composition composition = (Composition) compositionEntry.getResource();
         assertEquals(3, composition.getSection().size());
 
-        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> AllResourceConverterTest.this.getEntriesOfType(stu3Buble, ResourceType.Observation);
+        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.Observation);
         streamSupplier.get().forEach(observationEntry -> {
             assertTrue(isPresentInCompositionSection(composition, observationEntry));
             Observation observation = (Observation) observationEntry.getResource();
@@ -344,7 +345,7 @@ public class AllResourceConverterTest {
         Composition composition = (Composition) compositionEntry.getResource();
         assertEquals(3, composition.getSection().size());
 
-        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> AllResourceConverterTest.this.getEntriesOfType(stu3Buble, ResourceType.ProcedureRequest);
+        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.ProcedureRequest);
         streamSupplier.get().forEach(procedureRequestEntry -> {
             assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
             ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
@@ -375,6 +376,126 @@ public class AllResourceConverterTest {
         String s = allResourceConverter.convertBundleToStu3(content);
         Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
 
+        Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
+        Composition composition = (Composition) compositionEntry.getResource();
+        assertEquals(4, composition.getSection().size());
+        assertEquals(3, composition.getSection().stream().filter(
+                sectionComponent -> "Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
+                ).count());
+
+        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.MedicationRequest);
+        streamSupplier.get().forEach(medicationRequestEntry -> {
+            assertTrue(isPresentInCompositionSection(composition, medicationRequestEntry));
+            MedicationRequest medicationRequest = (MedicationRequest) medicationRequestEntry.getResource();
+            assertEquals("https://mci-showcase.twhosted.com/api/default/patients/98001462467", medicationRequest.getSubject().getReference());
+            assertEquals("urn:uuid:df0b047a-6b5f-4953-a37d-e95532f540aa", medicationRequest.getContext().getReference());
+            assertEquals("http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json", medicationRequest.getRequester().getAgent().getReference());
+
+            assertNotNull(medicationRequest.getAuthoredOn());
+            assertEquals("Some Notes", medicationRequest.getNoteFirstRep().getText());
+        });
+
+        Bundle.BundleEntryComponent newRequestWithNormalDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:654e0c26-3c63-4775-acaa-2be78c77781f");
+        MedicationRequest newRequestWithNormalDosage = (MedicationRequest) newRequestWithNormalDosageEntry.getResource();
+        assertNewRequestWithNormalDoses(newRequestWithNormalDosage);
+
+        Bundle.BundleEntryComponent newRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:1c626241-674b-4ba3-baac-fcb7769d6555");
+        MedicationRequest newRequestWithCustomDosage = (MedicationRequest) newRequestWithCustomDosageEntry.getResource();
+        assertRequestWithCustomDosage(newRequestWithCustomDosage, "NEW");
+
+        Bundle.BundleEntryComponent stoppedRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:858bbf2d-4d6c-4bb0-a42a-85364afa7501");
+        MedicationRequest stoppedRequestWithCustomDosage = (MedicationRequest) stoppedRequestWithCustomDosageEntry.getResource();
+        assertRequestWithCustomDosage(stoppedRequestWithCustomDosage, "DISCONTINUE");
+        assertEquals(stoppedRequestWithCustomDosage.getPriorPrescription().getReference(), newRequestWithCustomDosageEntry.getFullUrl());
+    }
+
+    @Test
+    public void shouldConvertABundleWithDiagnosticOrder() throws Exception {
+        URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_diagnostic_order.xml");
+        String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
+
+        String s = allResourceConverter.convertBundleToStu3(content);
+        System.out.println(s);
+        Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
+
+        Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
+        Composition composition = (Composition) compositionEntry.getResource();
+        assertEquals(3, composition.getSection().size());
+    }
+
+    private void assertRequestWithCustomDosage(MedicationRequest newRequestWithCustomDosage, String expectedAction) throws FHIRException {
+        List<Extension> extensions = newRequestWithCustomDosage.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
+        assertEquals(expectedAction, ((StringType) extensions.get(0).getValue()).getValue());
+
+        assertEquals(MedicationRequestStatus.STOPPED, newRequestWithCustomDosage.getStatus());
+        Coding medication = newRequestWithCustomDosage.getMedicationCodeableConcept().getCodingFirstRep();
+        assertEquals(trSystem, medication.getSystem());
+        assertEquals("d2d9213f-878d-11e5-95dd-005056b0145c", medication.getCode());
+
+        SimpleQuantity dispenseQuantity = newRequestWithCustomDosage.getDispenseRequest().getQuantity();
+        assertEquals(6, dispenseQuantity.getValue().intValue());
+        assertEquals("Tablet dose form", dispenseQuantity.getUnit());
+
+        Dosage dosageInstruction = newRequestWithCustomDosage.getDosageInstructionFirstRep();
+        List<Extension> dosageInstructionExtensions = dosageInstruction.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#DosageInstructionCustomDosage");
+        assertEquals("{\"morningDose\":1.0,\"eveningDose\":2.0}",((StringType)dosageInstructionExtensions.get(0).getValue()).getValue());
+        assertFalse(dosageInstruction.getAsNeededBooleanType().booleanValue());
+        Coding route = dosageInstruction.getRoute().getCodingFirstRep();
+        assertEquals(trSystem, route.getSystem());
+        assertEquals("_OralRoute", route.getCode());
+
+        SimpleQuantity doseQuantity = dosageInstruction.getDoseSimpleQuantity();
+        assertEquals(trSystem, doseQuantity.getSystem());
+        assertEquals("385055001", doseQuantity.getCode());
+        assertEquals("Tablet dose form", doseQuantity.getUnit());
+
+        Timing timing = dosageInstruction.getTiming();
+        List<Extension> dosageInstructionTimingExtensions = timing.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#TimingScheduledDate");
+        assertTrue(dosageInstructionTimingExtensions.get(0).getValue() instanceof DateTimeType);
+        Coding code = timing.getCode().getCodingFirstRep();
+        assertEquals("http://hl7.org/fhir/v3/GTSAbbreviation", code.getSystem());
+        assertEquals("BID", code.getCode());
+        Timing.TimingRepeatComponent repeat = timing.getRepeat();
+        assertNotNull(repeat.getBounds());
+    }
+
+    private void assertNewRequestWithNormalDoses(MedicationRequest newRequestWithNormalDosage) throws FHIRException {
+        List<Extension> extensions = newRequestWithNormalDosage.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
+        assertEquals("NEW", ((StringType) extensions.get(0).getValue()).getValue());
+
+        assertEquals(MedicationRequestStatus.ACTIVE, newRequestWithNormalDosage.getStatus());
+        Coding medication = newRequestWithNormalDosage.getMedicationCodeableConcept().getCodingFirstRep();
+        assertEquals(trSystem, medication.getSystem());
+        assertEquals("d2d98d73-878d-11e5-95dd-005056b0145c", medication.getCode());
+
+        SimpleQuantity dispenseQuantity = newRequestWithNormalDosage.getDispenseRequest().getQuantity();
+        assertEquals(2, dispenseQuantity.getValue().intValue());
+        assertEquals("Teaspoonful - unit of product", dispenseQuantity.getUnit());
+
+        Dosage dosageInstruction = newRequestWithNormalDosage.getDosageInstructionFirstRep();
+        assertFalse(dosageInstruction.getAsNeededBooleanType().booleanValue());
+        Coding route = dosageInstruction.getRoute().getCodingFirstRep();
+        assertEquals(trSystem, route.getSystem());
+        assertEquals("_OralRoute", route.getCode());
+
+        SimpleQuantity doseQuantity = dosageInstruction.getDoseSimpleQuantity();
+        assertEquals(trSystem, doseQuantity.getSystem());
+        assertEquals("415703001", doseQuantity.getCode());
+        assertEquals("Teaspoonful - unit of product", doseQuantity.getUnit());
+        assertEquals(1, doseQuantity.getValue().intValue());
+
+        Timing timing = dosageInstruction.getTiming();
+        List<Extension> dosageInstructionTimingExtensions = timing.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#TimingScheduledDate");
+        assertTrue(dosageInstructionTimingExtensions.get(0).getValue() instanceof DateTimeType);
+        Timing.TimingRepeatComponent repeat = timing.getRepeat();
+        assertEquals(2, repeat.getFrequency());
+        assertEquals(1, repeat.getPeriod().intValue());
+        assertEquals(D, repeat.getPeriodUnit());
+        assertNotNull(repeat.getBounds());
+    }
+
+    private Bundle.BundleEntryComponent getEntryByFullUrl(Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier, String fullUrl) {
+        return streamSupplier.get().filter(bundleEntryComponent -> fullUrl.equals(bundleEntryComponent.getFullUrl())).findFirst().get();
     }
 
     private Resource findObservationByName(Stream<Bundle.BundleEntryComponent> observationEntries, String name) {

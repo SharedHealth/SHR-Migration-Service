@@ -26,6 +26,8 @@ import static java.util.Arrays.asList;
 public class AllResourceConverter {
     private final IParser stu3Parser;
     private final IParser dstu2Parser;
+    private final String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
+    private final String MEDICATION_REQUEST_ENTRY_DISPLAY = "Medication Request";
     private R2R3ConversionManager r2R3ConversionManager;
 
     HashMap<String, ResourceReferenceDt> diagnosticReportPerformerMap = new HashMap<>();
@@ -48,15 +50,15 @@ public class AllResourceConverter {
 
     public String convertBundleToStu3(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException {
         //here I am extracting things which are
-//        dstu2BundleContent = extractMissingAndChangeInvalidFields(dstu2BundleContent);
+        dstu2BundleContent = extractMissingAndChangeInvalidFields(dstu2BundleContent);
 
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             InputStream inputStream = IOUtils.toInputStream(dstu2BundleContent, "UTF-8");
             r2R3ConversionManager.convert(inputStream, outputStream, true, Manager.FhirFormat.XML);
-
-//            setMissingFieldsAfterConversion(bundle);
-            return outputStream.toString();
+            Bundle bundle = stu3Parser.parseResource(Bundle.class, outputStream.toString());
+            setMissingFieldsAfterConversion(bundle);
+            return stu3Parser.encodeResourceToString(bundle);
         } catch (IOException | FHIRException e) {
             e.printStackTrace();
         }
@@ -66,12 +68,12 @@ public class AllResourceConverter {
     private String extractMissingAndChangeInvalidFields(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException {
         ca.uhn.fhir.model.dstu2.resource.Bundle dstu2Bundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, dstu2BundleContent);
         for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : dstu2Bundle.getEntry()) {
-            extractForDiagnosticReport(entry);
-            extractForConditions(entry);
-            extractForFamilyMemberHistory(entry);
+//            extractForDiagnosticReport(entry);
+//            extractForConditions(entry);
+//            extractForFamilyMemberHistory(entry);
             changeInvalidImmunizationStatus(entry);
-            extractForProcedure(entry);
-            extractForProcedureRequest(entry);
+//            extractForProcedure(entry);
+//            extractForProcedureRequest(entry);
             /*
                 get medicationorder entry
                 convert
@@ -141,11 +143,20 @@ public class AllResourceConverter {
 
     private void setMissingFieldsAfterConversion(Bundle bundle) {
         for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-            setForDiagnosticReport(entry);
-            setForConditions(entry);
-            setForFamilyMemberHistory(entry);
-            setFotProcedure(entry);
-            setForProcedureRequest(entry);
+            if (entry.getResource() instanceof Composition){
+                Composition composition = (Composition) entry.getResource();
+                for (Composition.SectionComponent sectionComponent : composition.getSection()) {
+                    Reference sectionEntry = sectionComponent.getEntryFirstRep();
+                    if (MEDICATION_ORDER_ENTRY_DISPLAY.equals(sectionEntry.getDisplay())){
+                        sectionEntry.setDisplay(MEDICATION_REQUEST_ENTRY_DISPLAY);
+                    }
+                }
+            }
+//            setForDiagnosticReport(entry);
+//            setForConditions(entry);
+//            setForFamilyMemberHistory(entry);
+//            setFotProcedure(entry);
+//            setForProcedureRequest(entry);
         }
     }
 
