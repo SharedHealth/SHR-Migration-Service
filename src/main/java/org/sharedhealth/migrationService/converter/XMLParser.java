@@ -19,6 +19,8 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class XMLParser {
 
@@ -26,6 +28,7 @@ public class XMLParser {
     private static final String DIAGNOSTIC_ORDER_TAG_NAME = "DiagnosticOrder";
 
     public static String removeExistingDiagnosticOrderFromBundleContent(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+        List<Element> entriesToRemove = new ArrayList<>();
         DocumentBuilderFactory dbf =
                 DocumentBuilderFactory.newInstance();
         DocumentBuilder db = dbf.newDocumentBuilder();
@@ -36,13 +39,14 @@ public class XMLParser {
         Element bundle = (Element) doc.getChildNodes().item(0);
         NodeList entries = bundle.getElementsByTagName("entry");
         Element compositionElement = null;
-        for (int i = 0; i < entries.getLength(); i++) {
+        int numberOfEntries = entries.getLength();
+        for (int i = 0; i < numberOfEntries; i++) {
             Element entry = (Element) entries.item(i);
             if (entry.getParentNode().equals(bundle)) {
                 NodeList entryChildren = entry.getChildNodes();
-                for (int i1 = 0; i1 < entryChildren.getLength(); i1++) {
-                    if (!(entryChildren.item(i1) instanceof Element)) continue;
-                    Element entryChild = (Element) entryChildren.item(i1);
+                for (int j = 0; j < entryChildren.getLength(); j++) {
+                    if (!(entryChildren.item(j) instanceof Element)) continue;
+                    Element entryChild = (Element) entryChildren.item(j);
                     if (!entryChild.getTagName().equals("resource")) continue;
                     NodeList resourceChildren = entryChild.getChildNodes();
                     for (int k = 0; k < resourceChildren.getLength(); k++) {
@@ -52,20 +56,28 @@ public class XMLParser {
                             compositionElement = resourceChild;
                         }
                         if (resourceChild.getTagName().equals(DIAGNOSTIC_ORDER_TAG_NAME)) {
-                            bundle.removeChild(entry);
+                            entriesToRemove.add(entry);
                         }
                     }
                 }
             }
         }
+        for (Element entryToRemove : entriesToRemove) {
+            bundle.removeChild(entryToRemove);
+        }
+        List<Element> sectionsToRemove = new ArrayList<>();
         NodeList compositionSections = compositionElement.getElementsByTagName("section");
-        for (int i = 0; i < compositionSections.getLength(); i++) {
+        int numberOfCompositionSections = compositionSections.getLength();
+        for (int i = 0; i < numberOfCompositionSections; i++) {
             Element section = (Element) compositionSections.item(i);
             Node displayNode = section.getElementsByTagName("display").item(0);
             if (displayNode == null) continue;
             if (DIAGNOSTIC_ORDER_SECTION_DISPLAY.equals(displayNode.getAttributes().item(0).getNodeValue())) {
-                compositionElement.removeChild(section);
+                sectionsToRemove.add(section);
             }
+        }
+        for (Element sectionToRemove : sectionsToRemove) {
+            compositionElement.removeChild(sectionToRemove);
         }
 
         Transformer transformer = TransformerFactory.newInstance().newTransformer();

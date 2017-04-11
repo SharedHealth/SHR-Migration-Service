@@ -1,0 +1,149 @@
+<Bundle xmlns="http://hl7.org/fhir">
+    <id value="0e0acd65-8037-4281-a591-28b83bc0c9d5"/>
+    <meta>
+        <lastUpdated value="2017-04-11T11:37:11.000+05:30"/>
+    </meta>
+    <type value="collection"/>
+    <entry>
+        <fullUrl value="urn:uuid:98a584fa-8383-45d6-a957-442fae21fb60"/>
+        <resource>
+            <Composition xmlns="http://hl7.org/fhir">
+                <identifier>
+                    <value value="urn:uuid:98a584fa-8383-45d6-a957-442fae21fb60"/>
+                </identifier>
+                <date value="2017-04-05T15:16:42.000+05:30"/>
+                <type>
+                    <coding>
+                        <system value="http://hl7.org/fhir/vs/doc-typecodes"/>
+                        <code value="51899-3"/>
+                        <display value="Details Document"/>
+                    </coding>
+                </type>
+                <title value="Patient Clinical Encounter"/>
+                <status value="final"/>
+                <confidentiality value="N"/>
+                <subject>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001541849"/>
+                    <display value="98001541849"/>
+                </subject>
+                <author>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/facilities/10000137.json"/>
+                </author>
+                <encounter>
+                    <reference value="urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad"/>
+                </encounter>
+                <section>
+                    <entry>
+                        <reference value="urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad"/>
+                        <display value="Encounter"/>
+                    </entry>
+                </section>
+                <section>
+                    <entry>
+                        <reference value="urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609"/>
+                        <display value="Diagnostic Order"/>
+                    </entry>
+                </section>
+            </Composition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad"/>
+        <resource>
+            <Encounter xmlns="http://hl7.org/fhir">
+                <identifier>
+                    <value value="urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad"/>
+                </identifier>
+                <status value="finished"/>
+                <class value="inpatient"/>
+                <type>
+                    <text value="OPD"/>
+                </type>
+                <patient>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001541849"/>
+                    <display value="98001541849"/>
+                </patient>
+                <participant>
+                    <individual>
+                        <reference value="http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json"/>
+                    </individual>
+                </participant>
+                <period>
+                    <start value="2017-04-03T16:37:31.000+05:30"/>
+                </period>
+                <serviceProvider>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/facilities/10000137.json"/>
+                </serviceProvider>
+            </Encounter>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609"/>
+        <resource>
+            <DiagnosticOrder xmlns="http://hl7.org/fhir">
+                <extension url="https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#DiagnosticOrderCategory">
+                    <valueString value="LAB"/>
+                </extension>
+                <subject>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001541849"/>
+                    <display value="98001541849"/>
+                </subject>
+                <orderer>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json"/>
+                </orderer>
+                <identifier>
+                    <value value="urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609"/>
+                </identifier>
+                <encounter>
+                    <reference value="urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad"/>
+                </encounter>
+                <item>
+                    <code>
+                        <coding>
+                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/referenceterms/d10a43c1-878d-11e5-95dd-005056b0145c"/>
+                            <code value="882-1"/>
+                            <display value="Blood grouping"/>
+                        </coding>
+                        <coding>
+                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/concepts/d10a0e4e-878d-11e5-95dd-005056b0145c"/>
+                            <code value="d10a0e4e-878d-11e5-95dd-005056b0145c"/>
+                            <display value="Blood grouping"/>
+                        </coding>
+                    </code>
+                    <status value="cancelled"/>
+                    <event>
+                        <status value="requested"/>
+                        <dateTime value="2017-04-11T11:37:11.000+05:30"/>
+                    </event>
+                    <event>
+                        <status value="cancelled"/>
+                        <dateTime value="2017-04-11T11:39:07.000+05:30"/>
+                    </event>
+                </item>
+                <item>
+                    <code>
+                        <coding>
+                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/referenceterms/d106868d-878d-11e5-95dd-005056b0145c"/>
+                            <code value="38168-1"/>
+                            <display value="Blood cross matching by low ionic strength saline (LISS)"/>
+                        </coding>
+                        <coding>
+                            <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/concepts/d10653d5-878d-11e5-95dd-005056b0145c"/>
+                            <code value="d10653d5-878d-11e5-95dd-005056b0145c"/>
+                            <display value="Blood cross matching by low ionic strength saline (LISS)"/>
+                        </coding>
+                    </code>
+                    <status value="cancelled"/>
+                    <event>
+                        <status value="requested"/>
+                        <dateTime value="2017-04-11T11:37:11.000+05:30"/>
+                    </event>
+                    <event>
+                        <status value="cancelled"/>
+                        <dateTime value="2017-04-11T11:39:07.000+05:30"/>
+                    </event>
+                </item>
+            </DiagnosticOrder>
+        </resource>
+    </entry>
+</Bundle>

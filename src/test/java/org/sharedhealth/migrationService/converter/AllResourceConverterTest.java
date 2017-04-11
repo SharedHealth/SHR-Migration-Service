@@ -91,6 +91,8 @@ public class AllResourceConverterTest {
         assertEquals("http://hl7.org/fhir/condition-category", category.getSystem());
         assertEquals("complaint", category.getCode());
 
+        /** Right now this fails. We will wait for converters to take care this.
+         *  If not done we will have to write code**/
         assertEquals(ACTIVE, chiefComplaint.getClinicalStatus());
         assertEquals(PROVISIONAL, chiefComplaint.getVerificationStatus());
         assertTrue(chiefComplaint.getOnset() instanceof Period);
@@ -174,10 +176,12 @@ public class AllResourceConverterTest {
         assertEquals("changed", observation.getComment());
         assertEquals("http://172.18.46.56:8081/api/v1/patients/98101039678", observation.getSubject().getReference());
         assertEquals("urn:uuid:85c310fd-1f9d-4c1e-a16b-4e53a636c46d", observation.getContext().getReference());
-        assertEquals("http://pr.com/api/1.0/providers/812.json", observation.getPerformerFirstRep().getReference());
-
         assertEquals("http://shr.com/patients/hid/encounters/shrEncounterId3", diagnosticReport.getBasedOnFirstRep().getReference());
+
+        /** Right now this fails. We will wait for converters to take care this.
+         *  If not done we will have to write code**/
         assertEquals("http://pr.com/api/1.0/providers/812.json", diagnosticReport.getPerformerFirstRep().getActor().getReference());
+        assertEquals("http://pr.com/api/1.0/providers/812.json", observation.getPerformerFirstRep().getReference());
     }
 
     @Test
@@ -207,9 +211,10 @@ public class AllResourceConverterTest {
         Coding code = conditionComponent.getCode().getCodingFirstRep();
         assertEquals(trSystem, code.getSystem());
         assertEquals("3", code.getCode());
-
-        //this notes conversion will work just for conditions having dignosis from TR
         assertEquals("Some notes", conditionComponent.getNoteFirstRep().getText());
+
+        /** Right now this fails. We will wait for converters to take care this.
+         *  If not done we will have to write code**/
         assertTrue(conditionComponent.hasOnset());
     }
 
@@ -437,7 +442,7 @@ public class AllResourceConverterTest {
             assertEquals(ORIGINALORDER, procedureRequest.getIntent());
         });
 
-        String fullUrl1 = "urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad#d10a0e4e-878d-11e5-95dd-005056b0145c";
+        String fullUrl1 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#d10a0e4e-878d-11e5-95dd-005056b0145c";
         Bundle.BundleEntryComponent entry1 = getEntryByFullUrl(streamSupplier, fullUrl1);
         ProcedureRequest procedureRequest1 = (ProcedureRequest) entry1.getResource();
         assertEquals(fullUrl1, procedureRequest1.getIdentifierFirstRep().getValue());
@@ -445,14 +450,29 @@ public class AllResourceConverterTest {
         assertEquals(2, procedureRequest1.getCode().getCoding().size());
         assertEquals("Blood grouping", procedureRequest1.getCode().getCodingFirstRep().getDisplay());
 
-        String fullUrl2 = "urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad#d10653d5-878d-11e5-95dd-005056b0145c";
+        String fullUrl2 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#d10653d5-878d-11e5-95dd-005056b0145c";
         Bundle.BundleEntryComponent entry2 = getEntryByFullUrl(streamSupplier, fullUrl2);
         ProcedureRequest procedureRequest2 = (ProcedureRequest) entry2.getResource();
         assertEquals(fullUrl2, procedureRequest2.getIdentifierFirstRep().getValue());
         assertEquals(fullUrl2, procedureRequest2.getId());
         assertEquals(2, procedureRequest2.getCode().getCoding().size());
         assertEquals("Blood cross matching by low ionic strength saline (LISS)", procedureRequest2.getCode().getCodingFirstRep().getDisplay());
+    }
 
+    @Test
+    public void shouldNotConvertCancelledDiagnosticOrder() throws Exception {
+        URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_cancelled_diagnostic_order.xml");
+        String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
+
+        String s = allResourceConverter.convertBundleToStu3(content);
+        Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
+
+        Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
+        Composition composition = (Composition) compositionEntry.getResource();
+        assertEquals(1, composition.getSection().size());
+        assertEquals(0, composition.getSection().stream().filter(
+                sectionComponent -> "Procedure Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
+        ).count());
     }
 
     private void assertRequestWithCustomDosage(MedicationRequest newRequestWithCustomDosage, String expectedAction) throws FHIRException {
@@ -523,6 +543,9 @@ public class AllResourceConverterTest {
         assertEquals(2, repeat.getFrequency());
         assertEquals(1, repeat.getPeriod().intValue());
         assertEquals(D, repeat.getPeriodUnit());
+
+        /** Right now this fails. We will wait for converters to take care this.
+         *  If not done we will have to write code**/
         assertNotNull(repeat.getBounds());
     }
 

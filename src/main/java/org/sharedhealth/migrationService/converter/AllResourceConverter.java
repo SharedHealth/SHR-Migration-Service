@@ -5,15 +5,22 @@ import ca.uhn.fhir.model.dstu2.composite.CodeableConceptDt;
 import ca.uhn.fhir.model.dstu2.composite.CodingDt;
 import ca.uhn.fhir.model.dstu2.composite.IdentifierDt;
 import ca.uhn.fhir.model.dstu2.composite.ResourceReferenceDt;
+import ca.uhn.fhir.model.dstu2.resource.*;
 import ca.uhn.fhir.model.dstu2.valueset.DiagnosticOrderStatusEnum;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.convertors.R2R3ConversionManager;
-import org.hl7.fhir.dstu2.model.DiagnosticOrder;
 import org.hl7.fhir.dstu2.model.MedicationAdministration;
 import org.hl7.fhir.dstu3.elementmodel.Manager;
 import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Composition;
+import org.hl7.fhir.dstu3.model.Condition;
+import org.hl7.fhir.dstu3.model.DiagnosticReport;
+import org.hl7.fhir.dstu3.model.FamilyMemberHistory;
+import org.hl7.fhir.dstu3.model.Procedure;
+import org.hl7.fhir.dstu3.model.ProcedureRequest;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.xml.sax.SAXException;
 
@@ -42,16 +49,16 @@ public class AllResourceConverter {
     private final IParser dstu2Parser;
     private R2R3ConversionManager r2R3ConversionManager;
 
-    HashMap<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderHashMap = new HashMap<>();
+    private HashMap<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderHashMap;
 
-    HashMap<String, ResourceReferenceDt> diagnosticReportPerformerMap = new HashMap<>();
-    HashMap<String, ResourceReferenceDt> procedureRequestOrdererMap = new HashMap<>();
-    HashMap<String, List<ResourceReferenceDt>> diagnosticReportRequestMap = new HashMap<>();
+    private HashMap<String, ResourceReferenceDt> diagnosticReportPerformerMap;
+    private HashMap<String, ResourceReferenceDt> procedureRequestOrdererMap = new HashMap<>();
+    private HashMap<String, List<ResourceReferenceDt>> diagnosticReportRequestMap = new HashMap<>();
 
-    HashMap<String, String> diagnosisNotesMap = new HashMap<>();
-    HashMap<String, List<ca.uhn.fhir.model.dstu2.composite.AnnotationDt>> procedureNotesMap = new HashMap<>();
-    HashMap<String, String> procedureRequestNotesMap = new HashMap<>();
-    HashMap<String, String> fmhConditionNotesMap = new HashMap<>();
+    private HashMap<String, String> diagnosisNotesMap = new HashMap<>();
+    private HashMap<String, List<ca.uhn.fhir.model.dstu2.composite.AnnotationDt>> procedureNotesMap = new HashMap<>();
+    private HashMap<String, String> procedureRequestNotesMap = new HashMap<>();
+    private HashMap<String, String> fmhConditionNotesMap = new HashMap<>();
 
     public AllResourceConverter() throws IOException, FHIRException {
         this.r2R3ConversionManager = new R2R3ConversionManager();
@@ -63,6 +70,7 @@ public class AllResourceConverter {
     }
 
     public String convertBundleToStu3(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+        diagnosticOrderHashMap = new HashMap<>();
 
         dstu2BundleContent = makeChangesToExistingContent(dstu2BundleContent);
 
@@ -175,6 +183,8 @@ public class AllResourceConverter {
             ProcedureRequest.ProcedureRequestStatus status = DiagnosticOrderStatusEnum.REQUESTED.getCode().equals(diagnosticOrder.getStatus()) ? ACTIVE : CANCELLED;
             int count = 1;
             for (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item : diagnosticOrder.getItem()) {
+                if (item.getEvent().size() > 1 && hasCancelledEvent(item)) continue;
+
                 ProcedureRequest procedureRequest = new ProcedureRequest();
                 Extension extension = procedureRequest.addExtension();
                 extension.setUrl("http://hl7.org/fhir/diagnosticorder-r2-marker").setValue(new BooleanType(true));
@@ -187,7 +197,10 @@ public class AllResourceConverter {
                 procedureRequest.addIdentifier().setValue(fullUrl);
                 procedureRequest.setId(fullUrl);
 
-                procedureRequest.setSubject(new Reference(diagnosticOrder.getSubject().getReference().getValue()));
+                ResourceReferenceDt diagnosticOrderSubject = diagnosticOrder.getSubject();
+                Reference subject = new Reference(diagnosticOrderSubject.getReference().getValue());
+                subject.setDisplay(diagnosticOrderSubject.getDisplay().getValue());
+                procedureRequest.setSubject(subject);
                 procedureRequest.setContext(new Reference(diagnosticOrder.getEncounter().getReference().getValue()));
 
                 if (!item.getStatus().isEmpty()) {
@@ -212,8 +225,13 @@ public class AllResourceConverter {
                 Reference reference = composition.addSection().addEntry();
                 reference.setReference(fullUrl);
                 reference.setDisplay(PROCEDURE_REQUEST_RESOURCE_DISPLAY);
+
             }
         }
+    }
+
+    private boolean hasCancelledEvent(ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item) {
+        return item.getEvent().stream().anyMatch(event -> event.getStatus().equals(DiagnosticOrderStatusEnum.CANCELLED.getCode()));
     }
 
     private String getCodeForConceptCoding(ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item) {

@@ -7,7 +7,9 @@ import org.mockito.Mock;
 import org.sharedhealth.migrationService.client.ShrClient;
 
 import java.net.URI;
+import java.net.URL;
 
+import static org.apache.logging.log4j.core.util.Loader.getClassLoader;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -25,6 +27,10 @@ public class AllEncounterFeedsTest {
 
     @Test
     public void shouldReadResponseAsFeed() throws Exception {
+        ClassLoader classLoader = this.getClass().getClassLoader();
+        URL resource = classLoader.getResource("org/apache/http/message/BasicLineFormatter.class");
+        System.out.println(resource);
+
         URI feedUri = URI.create("foo");
         when(shrClient.getFeed(feedUri)).thenReturn(asString("feeds/encounterByCatchmentFeed.xml"));
         AllEncounterFeeds encounterFeeds = new AllEncounterFeeds(shrClient);
