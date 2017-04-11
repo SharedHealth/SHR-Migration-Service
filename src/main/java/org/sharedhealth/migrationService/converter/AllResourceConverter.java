@@ -1,11 +1,16 @@
 package org.sharedhealth.migrationService.converter;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.model.dstu2.composite.CodeableConceptDt;
+import ca.uhn.fhir.model.dstu2.composite.CodingDt;
+import ca.uhn.fhir.model.dstu2.composite.IdentifierDt;
 import ca.uhn.fhir.model.dstu2.composite.ResourceReferenceDt;
+import ca.uhn.fhir.model.dstu2.valueset.DiagnosticOrderStatusEnum;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.convertors.R2R3ConversionManager;
+import org.hl7.fhir.dstu2.model.DiagnosticOrder;
 import org.hl7.fhir.dstu2.model.MedicationAdministration;
 import org.hl7.fhir.dstu3.elementmodel.Manager;
 import org.hl7.fhir.dstu3.model.*;
@@ -13,6 +18,7 @@ import org.hl7.fhir.exceptions.FHIRException;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,13 +28,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.ACTIVE;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
+import static org.sharedhealth.migrationService.converter.XMLParser.removeExistingDiagnosticOrderFromBundleContent;
 
 public class AllResourceConverter {
-    private final IParser stu3Parser;
-    private final IParser dstu2Parser;
     private final String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
     private final String MEDICATION_REQUEST_ENTRY_DISPLAY = "Medication Request";
+    private final static String PROCEDURE_REQUEST_RESOURCE_DISPLAY = "Procedure Request";
+
+    private final IParser stu3Parser;
+    private final IParser dstu2Parser;
     private R2R3ConversionManager r2R3ConversionManager;
+
+    HashMap<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderHashMap = new HashMap<>();
 
     HashMap<String, ResourceReferenceDt> diagnosticReportPerformerMap = new HashMap<>();
     HashMap<String, ResourceReferenceDt> procedureRequestOrdererMap = new HashMap<>();
@@ -48,16 +62,16 @@ public class AllResourceConverter {
         dstu2Parser = FhirContext.forDstu2().newXmlParser();
     }
 
-    public String convertBundleToStu3(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException {
-        //here I am extracting things which are
-        dstu2BundleContent = extractMissingAndChangeInvalidFields(dstu2BundleContent);
+    public String convertBundleToStu3(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException, TransformerException {
+
+        dstu2BundleContent = makeChangesToExistingContent(dstu2BundleContent);
 
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             InputStream inputStream = IOUtils.toInputStream(dstu2BundleContent, "UTF-8");
             r2R3ConversionManager.convert(inputStream, outputStream, true, Manager.FhirFormat.XML);
             Bundle bundle = stu3Parser.parseResource(Bundle.class, outputStream.toString());
-            setMissingFieldsAfterConversion(bundle);
+            makeNecessaryChangesToBundleAfterConversion(bundle);
             return stu3Parser.encodeResourceToString(bundle);
         } catch (IOException | FHIRException e) {
             e.printStackTrace();
@@ -65,21 +79,21 @@ public class AllResourceConverter {
         return null;
     }
 
-    private String extractMissingAndChangeInvalidFields(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException {
-        ca.uhn.fhir.model.dstu2.resource.Bundle dstu2Bundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, dstu2BundleContent);
-        for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : dstu2Bundle.getEntry()) {
-//            extractForDiagnosticReport(entry);
-//            extractForConditions(entry);
-//            extractForFamilyMemberHistory(entry);
-            changeInvalidImmunizationStatus(entry);
-//            extractForProcedure(entry);
-//            extractForProcedureRequest(entry);
-            /*
-                get medicationorder entry
-                convert
-                convert
-             */
+    private String makeChangesToExistingContent(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException, TransformerException {
+        ca.uhn.fhir.model.dstu2.resource.Bundle existingBundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, dstu2BundleContent);
+        for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : existingBundle.getEntry()) {
+            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) {
+                diagnosticOrderHashMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) entry.getResource());
+            }
         }
+
+        String content = removeExistingDiagnosticOrderFromBundleContent(dstu2BundleContent);
+        ca.uhn.fhir.model.dstu2.resource.Bundle dstu2Bundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, content);
+
+        for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : dstu2Bundle.getEntry()) {
+            changeInvalidImmunizationStatus(entry);
+        }
+
         return dstu2Parser.encodeResourceToString(dstu2Bundle);
     }
 
@@ -141,23 +155,82 @@ public class AllResourceConverter {
         }
     }
 
-    private void setMissingFieldsAfterConversion(Bundle bundle) {
+    private void makeNecessaryChangesToBundleAfterConversion(Bundle bundle) {
+        Composition composition = null;
         for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-            if (entry.getResource() instanceof Composition){
-                Composition composition = (Composition) entry.getResource();
+            if (entry.getResource() instanceof Composition) {
+                composition = (Composition) entry.getResource();
                 for (Composition.SectionComponent sectionComponent : composition.getSection()) {
                     Reference sectionEntry = sectionComponent.getEntryFirstRep();
-                    if (MEDICATION_ORDER_ENTRY_DISPLAY.equals(sectionEntry.getDisplay())){
+                    if (MEDICATION_ORDER_ENTRY_DISPLAY.equals(sectionEntry.getDisplay())) {
                         sectionEntry.setDisplay(MEDICATION_REQUEST_ENTRY_DISPLAY);
                     }
                 }
             }
-//            setForDiagnosticReport(entry);
-//            setForConditions(entry);
-//            setForFamilyMemberHistory(entry);
-//            setFotProcedure(entry);
-//            setForProcedureRequest(entry);
+
         }
+
+        for (String existingFullUrl : diagnosticOrderHashMap.keySet()) {
+            ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder diagnosticOrder = diagnosticOrderHashMap.get(existingFullUrl);
+            ProcedureRequest.ProcedureRequestStatus status = DiagnosticOrderStatusEnum.REQUESTED.getCode().equals(diagnosticOrder.getStatus()) ? ACTIVE : CANCELLED;
+            int count = 1;
+            for (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item : diagnosticOrder.getItem()) {
+                ProcedureRequest procedureRequest = new ProcedureRequest();
+                Extension extension = procedureRequest.addExtension();
+                extension.setUrl("http://hl7.org/fhir/diagnosticorder-r2-marker").setValue(new BooleanType(true));
+
+                List<IdentifierDt> identifier = diagnosticOrder.getIdentifier();
+                String codeForConceptCoding = getCodeForConceptCoding(item);
+                codeForConceptCoding = codeForConceptCoding != null ? codeForConceptCoding : String.valueOf(count++);
+                String fullUrl = String.format("%s#%s", identifier.get(0).getValue(), codeForConceptCoding);
+
+                procedureRequest.addIdentifier().setValue(fullUrl);
+                procedureRequest.setId(fullUrl);
+
+                procedureRequest.setSubject(new Reference(diagnosticOrder.getSubject().getReference().getValue()));
+                procedureRequest.setContext(new Reference(diagnosticOrder.getEncounter().getReference().getValue()));
+
+                if (!item.getStatus().isEmpty()) {
+                    status = DiagnosticOrderStatusEnum.REQUESTED.getCode().equals(item.getStatus()) ? ACTIVE : CANCELLED;
+                }
+
+                CodeableConcept codeableConcept = procedureRequest.addCategory();
+                codeableConcept.setText("LAB");
+
+                procedureRequest.setAuthoredOn(item.getEventFirstRep().getDateTime());
+                procedureRequest.setStatus(status);
+                procedureRequest.setIntent(ORIGINALORDER);
+                procedureRequest.setCode(convertCode(item.getCode()));
+                ProcedureRequest.ProcedureRequestRequesterComponent component = new ProcedureRequest.ProcedureRequestRequesterComponent();
+                component.setAgent(new Reference(diagnosticOrder.getOrderer().getReference().getValue()));
+                procedureRequest.setRequester(component);
+
+                Bundle.BundleEntryComponent bundleEntryComponent = bundle.addEntry();
+                bundleEntryComponent.setFullUrl(fullUrl);
+                bundleEntryComponent.setResource(procedureRequest);
+
+                Reference reference = composition.addSection().addEntry();
+                reference.setReference(fullUrl);
+                reference.setDisplay(PROCEDURE_REQUEST_RESOURCE_DISPLAY);
+            }
+        }
+    }
+
+    private String getCodeForConceptCoding(ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item) {
+        for (CodingDt codingDt : item.getCode().getCoding()) {
+            if (StringUtils.isNotBlank(codingDt.getSystem()) && codingDt.getSystem().contains("/tr/concepts/")){
+                return codingDt.getCode();
+            }
+        }
+        return null;
+    }
+
+    private CodeableConcept convertCode(CodeableConceptDt code) {
+        CodeableConcept codeableConcept = new CodeableConcept();
+        for (CodingDt codingDt : code.getCoding()) {
+            codeableConcept.addCoding(new Coding(codingDt.getSystem(),codingDt.getCode(),codingDt.getDisplay()));
+        }
+        return codeableConcept;
     }
 
     private void setForProcedureRequest(Bundle.BundleEntryComponent entry) {

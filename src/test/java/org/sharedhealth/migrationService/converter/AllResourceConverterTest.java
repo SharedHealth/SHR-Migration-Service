@@ -20,6 +20,7 @@ import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.CON
 import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.PROVISIONAL;
 import static org.hl7.fhir.dstu3.model.Encounter.EncounterStatus.FINISHED;
 import static org.hl7.fhir.dstu3.model.Observation.ObservationStatus.PRELIMINARY;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.SUSPENDED;
 import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
@@ -381,7 +382,7 @@ public class AllResourceConverterTest {
         assertEquals(4, composition.getSection().size());
         assertEquals(3, composition.getSection().stream().filter(
                 sectionComponent -> "Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
-                ).count());
+        ).count());
 
         Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.MedicationRequest);
         streamSupplier.get().forEach(medicationRequestEntry -> {
@@ -415,12 +416,43 @@ public class AllResourceConverterTest {
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
         String s = allResourceConverter.convertBundleToStu3(content);
-        System.out.println(s);
         Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
         assertEquals(3, composition.getSection().size());
+        assertEquals(2, composition.getSection().stream().filter(
+                sectionComponent -> "Procedure Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
+        ).count());
+
+        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.ProcedureRequest);
+        streamSupplier.get().forEach(procedureRequestEntry -> {
+            assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
+            ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
+            assertEquals("https://mci-showcase.twhosted.com/api/default/patients/98001541849", procedureRequest.getSubject().getReference());
+            assertEquals("urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad", procedureRequest.getContext().getReference());
+            assertEquals("http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json", procedureRequest.getRequester().getAgent().getReference());
+            assertNotNull(procedureRequest.getAuthoredOn());
+            assertEquals("LAB", procedureRequest.getCategoryFirstRep().getText());
+            assertEquals(ORIGINALORDER, procedureRequest.getIntent());
+        });
+
+        String fullUrl1 = "urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad#d10a0e4e-878d-11e5-95dd-005056b0145c";
+        Bundle.BundleEntryComponent entry1 = getEntryByFullUrl(streamSupplier, fullUrl1);
+        ProcedureRequest procedureRequest1 = (ProcedureRequest) entry1.getResource();
+        assertEquals(fullUrl1, procedureRequest1.getIdentifierFirstRep().getValue());
+        assertEquals(fullUrl1, procedureRequest1.getId());
+        assertEquals(2, procedureRequest1.getCode().getCoding().size());
+        assertEquals("Blood grouping", procedureRequest1.getCode().getCodingFirstRep().getDisplay());
+
+        String fullUrl2 = "urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad#d10653d5-878d-11e5-95dd-005056b0145c";
+        Bundle.BundleEntryComponent entry2 = getEntryByFullUrl(streamSupplier, fullUrl2);
+        ProcedureRequest procedureRequest2 = (ProcedureRequest) entry2.getResource();
+        assertEquals(fullUrl2, procedureRequest2.getIdentifierFirstRep().getValue());
+        assertEquals(fullUrl2, procedureRequest2.getId());
+        assertEquals(2, procedureRequest2.getCode().getCoding().size());
+        assertEquals("Blood cross matching by low ionic strength saline (LISS)", procedureRequest2.getCode().getCodingFirstRep().getDisplay());
+
     }
 
     private void assertRequestWithCustomDosage(MedicationRequest newRequestWithCustomDosage, String expectedAction) throws FHIRException {
@@ -438,7 +470,7 @@ public class AllResourceConverterTest {
 
         Dosage dosageInstruction = newRequestWithCustomDosage.getDosageInstructionFirstRep();
         List<Extension> dosageInstructionExtensions = dosageInstruction.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#DosageInstructionCustomDosage");
-        assertEquals("{\"morningDose\":1.0,\"eveningDose\":2.0}",((StringType)dosageInstructionExtensions.get(0).getValue()).getValue());
+        assertEquals("{\"morningDose\":1.0,\"eveningDose\":2.0}", ((StringType) dosageInstructionExtensions.get(0).getValue()).getValue());
         assertFalse(dosageInstruction.getAsNeededBooleanType().booleanValue());
         Coding route = dosageInstruction.getRoute().getCodingFirstRep();
         assertEquals(trSystem, route.getSystem());
