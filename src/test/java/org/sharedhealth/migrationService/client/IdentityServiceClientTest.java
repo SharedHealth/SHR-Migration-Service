@@ -5,7 +5,7 @@ import org.apache.http.HttpStatus;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.identity.IdentityStore;
 import org.sharedhealth.migrationService.identity.IdentityToken;
 
@@ -19,7 +19,7 @@ import static org.sharedhealth.migrationService.utils.Headers.X_AUTH_TOKEN_KEY;
 
 public class IdentityServiceClientTest {
 
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
     private IdentityStore identityStore;
     private IdentityServiceClient identityServiceClient;
 
@@ -28,7 +28,7 @@ public class IdentityServiceClientTest {
 
     @Before
     public void setUp() throws Exception {
-        properties = mock(ShrProperties.class);
+        properties = mock(SHRMigrationProperties.class);
         identityStore = mock(IdentityStore.class);
         identityServiceClient = new IdentityServiceClient(properties, identityStore);
     }

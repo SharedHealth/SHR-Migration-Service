@@ -12,9 +12,6 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    flatDir {
-        dirs "${rootDir}/lib"
-    }
 }
 
 jar {
@@ -26,40 +23,44 @@ jar {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
+
 ext.libraries = [
-        apache_log4j_core            : "org.apache.logging.log4j:log4j-core:2.6.2",
-        atomfeed_client              : "org.ict4h:atomfeed-client:1.9.3",
-        atomfeed_commons             : "org.ict4h:atomfeed-commons:1.9.3",
-        spring_framework             : "org.springframework:spring-core:4.1.1.RELEASE",
-        spring_transaction           : "org.springframework:spring-tx:4.1.1.RELEASE",
-        spring_boot_logging          : "org.springframework.boot:spring-boot-starter-log4j:1.1.1.RELEASE",
-        spring_jdbc                  : "org.springframework:spring-jdbc:4.1.1.RELEASE",
-        quartz_scheduler             : "org.quartz-scheduler:quartz:1.7.3",
-        spring_ctx_support           : "org.springframework:spring-context-support:4.1.1.RELEASE",
-        jackson                      : "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.4.0",
-        mysql_connector              : "mysql:mysql-connector-java:5.1.6",
-        apache_httpclient            : "org.apache.httpcomponents:httpclient:4.3.5",
-        apache_commons_codec         : "commons-codec:commons-codec:1.9",
-        apache_commons_dbcp          : "commons-dbcp:commons-dbcp:1.4",
-        apache_commons_io            : "org.apache.commons:commons-io:1.3.2",
-        liquibase                    : "org.liquibase:liquibase-core:3.2.2",
-        hapi_fhir_base               : "ca.uhn.hapi.fhir:hapi-fhir-base:2.3",
-        hapi_fhir_structures3        : "ca.uhn.hapi.fhir:hapi-fhir-structures-dstu3:2.3",
-        hapi_fhir_structures2        : "ca.uhn.hapi.fhir:hapi-fhir-structures-dstu2:2.3",
+        apache_log4j_core    : "org.apache.logging.log4j:log4j-core:2.6.2",
+        atomfeed_client      : "org.ict4h:atomfeed-client:1.9.3",
+        atomfeed_commons     : "org.ict4h:atomfeed-commons:1.9.3",
+        spring_framework     : "org.springframework:spring-core:4.1.1.RELEASE",
+        spring_transaction   : "org.springframework:spring-tx:4.1.1.RELEASE",
+        spring_boot_logging  : "org.springframework.boot:spring-boot-starter-log4j:1.1.1.RELEASE",
+        spring_jdbc          : "org.springframework:spring-jdbc:4.1.1.RELEASE",
+        quartz_scheduler     : "org.quartz-scheduler:quartz:1.7.3",
+        spring_ctx_support   : "org.springframework:spring-context-support:4.1.1.RELEASE",
+        jackson              : "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.4.0",
+        mysql_connector      : "mysql:mysql-connector-java:5.1.6",
+        apache_httpclient    : "org.apache.httpcomponents:httpclient:4.3.5",
+        apache_commons_codec : "commons-codec:commons-codec:1.9",
+        apache_commons_dbcp  : "commons-dbcp:commons-dbcp:1.4",
+        apache_commons_io    : "org.apache.commons:commons-io:1.3.2",
+        liquibase            : "org.liquibase:liquibase-core:3.2.2",
+        hapi_fhir_base       : "ca.uhn.hapi.fhir:hapi-fhir-base:2.3",
+        hapi_fhir_structures3: "ca.uhn.hapi.fhir:hapi-fhir-structures-dstu3:2.3",
+        hapi_fhir_structures2: "ca.uhn.hapi.fhir:hapi-fhir-structures-dstu2:2.3",
 ]
 
 ext.testLibraries = [
-        junit         : "junit:junit:4.12",
-        mockito       : "org.mockito:mockito-all:1.10.19",
-        wiremock      : "com.github.tomakehurst:wiremock:1.56",
-        spring_test   : "org.springframework:spring-test:4.1.1.RELEASE",
+        junit      : "junit:junit:4.12",
+        mockito    : "org.mockito:mockito-all:1.10.19",
+        wiremock   : "com.github.tomakehurst:wiremock:1.56",
+        spring_test: "org.springframework:spring-test:4.1.1.RELEASE",
 ]
 
 dependencies {
     compile('org.springframework.boot:spring-boot-starter-web:1.1.8.RELEASE') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
-    compile files('lib/org.hl7.fhir.igpublisher.jar')
+    compile files('lib/org.hl7.fhir.igpublisher.jar'){
+
+    }
+
     compile libraries.values()
 
     testCompile testLibraries.values()

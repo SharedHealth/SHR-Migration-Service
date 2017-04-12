@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.ict4h.atomfeed.client.repository.jdbc.AllFailedEventsJdbcImpl;
 import org.ict4h.atomfeed.client.repository.jdbc.AllMarkersJdbcImpl;
 import org.sharedhealth.migrationService.client.ShrClient;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.feed.encounter.EncounterEventWorker;
 import org.sharedhealth.migrationService.feed.encounter.ShrCatchmentEncounterFeedProcessor;
 import org.sharedhealth.migrationService.feed.transaction.AtomFeedSpringTransactionManager;
@@ -19,7 +19,7 @@ public class CatchmentEncounterCrawlerJob {
     @Autowired
     private DataSourceTransactionManager txMgr;
     @Autowired
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
     @Autowired
     private ShrClient shrWebClient;
     @Autowired
@@ -30,7 +30,7 @@ public class CatchmentEncounterCrawlerJob {
     @Scheduled(fixedDelayString = "${ENCOUNTER_SYNC_JOB_INTERVAL}", initialDelay = 10000)
     public void start() {
         for (String catchment : properties.getCatchmentList()) {
-            String feedUrl = ensureSuffix(properties.getShrServerBaseUrl(), "/") + "catchments/" + catchment + "/encounters";
+            String feedUrl = properties.getShrServerBaseUrl() + "catchments/" + catchment + "/encounters";
             AtomFeedSpringTransactionManager transactionManager = new AtomFeedSpringTransactionManager(txMgr);
             ShrCatchmentEncounterFeedProcessor feedCrawler =
                     new ShrCatchmentEncounterFeedProcessor(
@@ -48,16 +48,4 @@ public class CatchmentEncounterCrawlerJob {
             }
         }
     }
-
-
-    private static String ensureSuffix(String value, String suffix) {
-        String trimmedValue = value.trim();
-        if (trimmedValue.endsWith(suffix)) {
-            return trimmedValue;
-        } else {
-            return trimmedValue + suffix;
-        }
-    }
-
-
 }

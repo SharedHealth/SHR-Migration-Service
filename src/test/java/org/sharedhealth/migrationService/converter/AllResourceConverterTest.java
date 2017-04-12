@@ -8,6 +8,7 @@ import org.hl7.fhir.dstu3.model.MedicationRequest.MedicationRequestStatus;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 
 import java.io.File;
 import java.net.URL;
@@ -21,9 +22,13 @@ import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.PRO
 import static org.hl7.fhir.dstu3.model.Encounter.EncounterStatus.FINISHED;
 import static org.hl7.fhir.dstu3.model.Observation.ObservationStatus.PRELIMINARY;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.SUSPENDED;
 import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 
 public class AllResourceConverterTest {
     private final String trSystem = "http://tr.com";
@@ -31,11 +36,14 @@ public class AllResourceConverterTest {
     private final String trDisplay = "answerDisplay";
     private static AllResourceConverter allResourceConverter;
 
-    IParser xmlParser = FhirContext.forDstu3().newXmlParser();
+    private static SHRMigrationProperties shrMigrationProperties;
+
+    private IParser xmlParser = FhirContext.forDstu3().newXmlParser();
 
     @BeforeClass
     public static void setUp() throws Exception {
-        allResourceConverter = new AllResourceConverter();
+        shrMigrationProperties = mock(SHRMigrationProperties.class);
+        allResourceConverter = new AllResourceConverter(shrMigrationProperties);
     }
 
     @Test
@@ -345,6 +353,7 @@ public class AllResourceConverterTest {
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
         String s = allResourceConverter.convertBundleToStu3(content);
+        System.out.println(s);
         Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
@@ -368,7 +377,7 @@ public class AllResourceConverterTest {
         });
 
         ProcedureRequest suspendedRequest = (ProcedureRequest) streamSupplier.get().filter(
-                entry -> SUSPENDED.equals(((ProcedureRequest) entry.getResource()).getStatus()))
+                entry -> CANCELLED.equals(((ProcedureRequest) entry.getResource()).getStatus()))
                 .findFirst().get().getResource();
         List<Extension> extensions = suspendedRequest.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest");
         assertEquals(1, extensions.size());
@@ -417,6 +426,8 @@ public class AllResourceConverterTest {
 
     @Test
     public void shouldConvertABundleWithDiagnosticOrder() throws Exception {
+        when(shrMigrationProperties.getTrValuesetUri()).thenReturn("http://tr.com/valuesets/");
+
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_diagnostic_order.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
@@ -434,11 +445,12 @@ public class AllResourceConverterTest {
         streamSupplier.get().forEach(procedureRequestEntry -> {
             assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
             ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
+            assertEquals("http://tr.com/valuesets/Order-Type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
+            assertEquals("LAB", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
             assertEquals("https://mci-showcase.twhosted.com/api/default/patients/98001541849", procedureRequest.getSubject().getReference());
             assertEquals("urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad", procedureRequest.getContext().getReference());
             assertEquals("http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json", procedureRequest.getRequester().getAgent().getReference());
             assertNotNull(procedureRequest.getAuthoredOn());
-            assertEquals("LAB", procedureRequest.getCategoryFirstRep().getText());
             assertEquals(ORIGINALORDER, procedureRequest.getIntent());
         });
 

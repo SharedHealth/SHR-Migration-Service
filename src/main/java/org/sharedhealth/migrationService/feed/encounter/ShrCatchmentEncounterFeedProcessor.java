@@ -10,7 +10,7 @@ import org.ict4h.atomfeed.client.repository.AllMarkers;
 import org.ict4h.atomfeed.client.service.AtomFeedClient;
 import org.ict4h.atomfeed.client.service.EventWorker;
 import org.sharedhealth.migrationService.client.ShrClient;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.feed.transaction.AtomFeedSpringTransactionManager;
 
 import java.net.URI;
@@ -24,7 +24,7 @@ public class ShrCatchmentEncounterFeedProcessor {
     private AllFailedEvents failedEvents;
     private AtomFeedSpringTransactionManager transactionManager;
     private ShrClient shrWebClient;
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
 
     private Logger logger = LogManager.getLogger(ShrCatchmentEncounterFeedProcessor.class);
 
@@ -35,7 +35,7 @@ public class ShrCatchmentEncounterFeedProcessor {
                                               AllFailedEvents failedEvents,
                                               AtomFeedSpringTransactionManager transactionManager,
                                               ShrClient shrWebClient,
-                                              ShrProperties properties) {
+                                              SHRMigrationProperties properties) {
         this.encounterEventWorker = encounterEventWorker;
         this.feedUrl = feedUrl;
         this.markers = markers;

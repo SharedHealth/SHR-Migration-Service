@@ -2,7 +2,7 @@ package org.sharedhealth.migrationService.client;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.identity.IdentityStore;
 import org.sharedhealth.migrationService.identity.IdentityToken;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,11 @@ import static org.sharedhealth.migrationService.utils.Headers.*;
 
 @Component
 public class IdentityServiceClient {
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
     private IdentityStore identityStore;
 
     @Autowired
-    public IdentityServiceClient(ShrProperties properties, IdentityStore identityStore) {
+    public IdentityServiceClient(SHRMigrationProperties properties, IdentityStore identityStore) {
         this.properties = properties;
         this.identityStore = identityStore;
     }

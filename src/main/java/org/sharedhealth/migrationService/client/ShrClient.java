@@ -2,7 +2,7 @@ package org.sharedhealth.migrationService.client;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.exception.ConnectionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,12 +17,12 @@ import static org.sharedhealth.migrationService.utils.Headers.getShrIdentityHead
 public class ShrClient {
     private IdentityServiceClient identityServiceClient;
 
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
     private Logger logger = LogManager.getLogger(ShrClient.class);
 
 
     @Autowired
-    public ShrClient(IdentityServiceClient identityServiceClient, ShrProperties properties) {
+    public ShrClient(IdentityServiceClient identityServiceClient, SHRMigrationProperties properties) {
         this.identityServiceClient = identityServiceClient;
         this.properties = properties;
     }

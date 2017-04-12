@@ -27,10 +27,6 @@ public class AllEncounterFeedsTest {
 
     @Test
     public void shouldReadResponseAsFeed() throws Exception {
-        ClassLoader classLoader = this.getClass().getClassLoader();
-        URL resource = classLoader.getResource("org/apache/http/message/BasicLineFormatter.class");
-        System.out.println(resource);
-
         URI feedUri = URI.create("foo");
         when(shrClient.getFeed(feedUri)).thenReturn(asString("feeds/encounterByCatchmentFeed.xml"));
         AllEncounterFeeds encounterFeeds = new AllEncounterFeeds(shrClient);

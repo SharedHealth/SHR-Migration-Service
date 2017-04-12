@@ -5,7 +5,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.sharedhealth.migrationService.config.ShrProperties;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.sharedhealth.migrationService.identity.IdentityToken;
 
 import java.net.URI;
@@ -26,7 +26,7 @@ public class ShrClientTest {
     IdentityServiceClient identityServiceClient;
 
     @Mock
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
 
     @Rule
     public WireMockRule wireMockRule = new WireMockRule(9997);

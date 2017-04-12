@@ -15,7 +15,7 @@ import javax.sql.DataSource;
 public class AtomFeedClientDatabaseConfig {
 
     @Autowired
-    private ShrProperties properties;
+    private SHRMigrationProperties properties;
 
     @Bean
     public DataSource dataSource() {

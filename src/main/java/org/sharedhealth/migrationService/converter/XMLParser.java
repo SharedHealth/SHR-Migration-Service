@@ -27,6 +27,9 @@ public class XMLParser {
     private static final String DIAGNOSTIC_ORDER_SECTION_DISPLAY = "Diagnostic Order";
     private static final String DIAGNOSTIC_ORDER_TAG_NAME = "DiagnosticOrder";
 
+    private static final String PROCEDURE_REQUEST_SECTION_DISPLAY = "Procedure Request";
+    private static final String PROCEDURE_REQUEST_TAG_NAME = "ProcedureRequest";
+
     public static String removeExistingDiagnosticOrderFromBundleContent(String dstu2BundleContent) throws ParserConfigurationException, SAXException, IOException, TransformerException {
         List<Element> entriesToRemove = new ArrayList<>();
         DocumentBuilderFactory dbf =
@@ -58,13 +61,18 @@ public class XMLParser {
                         if (resourceChild.getTagName().equals(DIAGNOSTIC_ORDER_TAG_NAME)) {
                             entriesToRemove.add(entry);
                         }
+                        if (resourceChild.getTagName().equals(PROCEDURE_REQUEST_TAG_NAME)) {
+                            entriesToRemove.add(entry);
+                        }
                     }
                 }
             }
         }
+
         for (Element entryToRemove : entriesToRemove) {
             bundle.removeChild(entryToRemove);
         }
+
         List<Element> sectionsToRemove = new ArrayList<>();
         NodeList compositionSections = compositionElement.getElementsByTagName("section");
         int numberOfCompositionSections = compositionSections.getLength();
@@ -73,6 +81,9 @@ public class XMLParser {
             Node displayNode = section.getElementsByTagName("display").item(0);
             if (displayNode == null) continue;
             if (DIAGNOSTIC_ORDER_SECTION_DISPLAY.equals(displayNode.getAttributes().item(0).getNodeValue())) {
+                sectionsToRemove.add(section);
+            }
+            if (PROCEDURE_REQUEST_SECTION_DISPLAY.equals(displayNode.getAttributes().item(0).getNodeValue())) {
                 sectionsToRemove.add(section);
             }
         }
