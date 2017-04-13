@@ -22,13 +22,10 @@ import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.PRO
 import static org.hl7.fhir.dstu3.model.Encounter.EncounterStatus.FINISHED;
 import static org.hl7.fhir.dstu3.model.Observation.ObservationStatus.PRELIMINARY;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
-import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
-import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.SUSPENDED;
 import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
 
 public class AllResourceConverterTest {
     private final String trSystem = "http://tr.com";
@@ -349,38 +346,57 @@ public class AllResourceConverterTest {
 
     @Test
     public void shouldConvertABundleWithProcedureRequests() throws Exception {
-        URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request.xml");
-        String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
+        URL requestedProcedure = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request_new.xml");
+        String requestedProcedureContent = FileUtils.readFileToString(new File(requestedProcedure.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content);
-        System.out.println(s);
-        Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
+        Bundle stu3Buble = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(requestedProcedureContent));
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
         assertEquals(3, composition.getSection().size());
 
-        Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.ProcedureRequest);
-        streamSupplier.get().forEach(procedureRequestEntry -> {
-            assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
-            ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
-            assertEquals("http://172.18.46.199:8081/api/v1/patients/98001175044", procedureRequest.getSubject().getReference());
-            assertEquals("urn:uuid:763dee64-44d5-4820-b9c0-6c51bf1d3fa9", procedureRequest.getContext().getReference());
-            assertEquals("http://172.18.46.199:8084/api/1.0/providers/24.json", procedureRequest.getRequester().getAgent().getReference());
+        Bundle.BundleEntryComponent procedureRequestEntry = getFirstEntryOfType(stu3Buble, ResourceType.ProcedureRequest);
+        assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
+        ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
+        assertEquals("http://172.18.46.199:8081/api/v1/patients/98001175044", procedureRequest.getSubject().getReference());
+        assertEquals("urn:uuid:763dee64-44d5-4820-b9c0-6c51bf1d3fa9", procedureRequest.getContext().getReference());
+        assertEquals("http://172.18.46.199:8084/api/1.0/providers/24.json", procedureRequest.getRequester().getAgent().getReference());
+        Coding code = procedureRequest.getCode().getCodingFirstRep();
+        assertEquals(trSystem, code.getSystem());
+        assertEquals("f73b4c1a-88b1-11e5-8d1e-005056b0145c", code.getCode());
+        assertNotNull(procedureRequest.getAuthoredOn());
+        assertEquals("Some Notes", procedureRequest.getNoteFirstRep().getText());
 
-            Coding code = procedureRequest.getCode().getCodingFirstRep();
-            assertEquals(trSystem, code.getSystem());
-            assertEquals("101", code.getCode());
+        Bundle.BundleEntryComponent provenanceForNewEntry = getFirstEntryOfType(stu3Buble, ResourceType.Provenance);
+        assertTrue(isPresentInCompositionSection(composition, provenanceForNewEntry));
+        Provenance provenanceForNew = (Provenance) provenanceForNewEntry.getResource();
+        assertEquals(procedureRequestEntry.getFullUrl(), provenanceForNew.getTargetFirstRep().getReference());
+        assertEquals(procedureRequest.getAuthoredOn(), provenanceForNew.getRecorded());
+        assertEquals(procedureRequest.getRequester().getAgent().getReference(), provenanceForNew.getAgentFirstRep().getWhoReference().getReference());
 
-            assertNotNull(procedureRequest.getAuthoredOn());
-            assertEquals("Some Notes", procedureRequest.getNoteFirstRep().getText());
-        });
+        URL cancelledProcedure = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request_cancelled.xml");
+        String cancelledProcedureContent = FileUtils.readFileToString(new File(cancelledProcedure.getFile()), "UTF-8");
 
-        ProcedureRequest suspendedRequest = (ProcedureRequest) streamSupplier.get().filter(
-                entry -> CANCELLED.equals(((ProcedureRequest) entry.getResource()).getStatus()))
-                .findFirst().get().getResource();
-        List<Extension> extensions = suspendedRequest.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest");
-        assertEquals(1, extensions.size());
+        Bundle newBundle = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(cancelledProcedureContent));
+
+        Bundle.BundleEntryComponent newCompositionEntry = getFirstEntryOfType(newBundle, ResourceType.Composition);
+        Composition newComposition = (Composition) newCompositionEntry.getResource();
+        assertEquals(3, newComposition.getSection().size());
+
+        Bundle.BundleEntryComponent cancelledProcedureRequestEntry = getEntriesOfType(newBundle, ResourceType.ProcedureRequest).findFirst().get();
+        assertTrue(isPresentInCompositionSection(newComposition, cancelledProcedureRequestEntry));
+        ProcedureRequest cancelledProcedureRequest = (ProcedureRequest) cancelledProcedureRequestEntry.getResource();
+        assertEquals(1, cancelledProcedureRequest.getRelevantHistory().size());
+        Reference reference = cancelledProcedureRequest.getRelevantHistoryFirstRep();
+        assertEquals(provenanceForNewEntry.getFullUrl(),reference.getReference());
+
+        Bundle.BundleEntryComponent provenanceForCancelledEntry = getFirstEntryOfType(newBundle, ResourceType.Provenance);
+        assertTrue(isPresentInCompositionSection(newComposition, provenanceForCancelledEntry));
+        Provenance provenanceForCancelled = (Provenance) provenanceForCancelledEntry.getResource();
+
+        assertEquals(cancelledProcedureRequestEntry.getFullUrl(), provenanceForCancelled.getTargetFirstRep().getReference());
+        assertEquals(cancelledProcedureRequest.getAuthoredOn(), provenanceForCancelled.getRecorded());
+        assertEquals(cancelledProcedureRequest.getRequester().getAgent().getReference(), provenanceForCancelled.getAgentFirstRep().getWhoReference().getReference());
     }
 
     @Test

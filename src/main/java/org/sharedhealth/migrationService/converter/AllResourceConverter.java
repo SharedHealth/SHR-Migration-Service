@@ -2,9 +2,13 @@ package org.sharedhealth.migrationService.converter;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.ExtensionDt;
-import ca.uhn.fhir.model.dstu2.composite.*;
-import ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder;
+import ca.uhn.fhir.model.dstu2.composite.CodeableConceptDt;
+import ca.uhn.fhir.model.dstu2.composite.CodingDt;
+import ca.uhn.fhir.model.dstu2.composite.IdentifierDt;
+import ca.uhn.fhir.model.dstu2.composite.ResourceReferenceDt;
+import ca.uhn.fhir.model.dstu2.resource.*;
 import ca.uhn.fhir.model.dstu2.valueset.DiagnosticOrderStatusEnum;
+import ca.uhn.fhir.model.dstu2.valueset.ProcedureRequestStatusEnum;
 import ca.uhn.fhir.model.primitive.StringDt;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.IOUtils;
@@ -13,6 +17,14 @@ import org.hl7.fhir.convertors.R2R3ConversionManager;
 import org.hl7.fhir.dstu2.model.MedicationAdministration;
 import org.hl7.fhir.dstu3.elementmodel.Manager;
 import org.hl7.fhir.dstu3.model.*;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Composition;
+import org.hl7.fhir.dstu3.model.Condition;
+import org.hl7.fhir.dstu3.model.DiagnosticReport;
+import org.hl7.fhir.dstu3.model.FamilyMemberHistory;
+import org.hl7.fhir.dstu3.model.Procedure;
+import org.hl7.fhir.dstu3.model.ProcedureRequest;
+import org.hl7.fhir.dstu3.model.Provenance;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +41,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ca.uhn.fhir.model.dstu2.valueset.ProcedureRequestStatusEnum.REQUESTED;
@@ -42,14 +53,18 @@ import static org.sharedhealth.migrationService.converter.XMLParser.removeExisti
 
 @Component
 public class AllResourceConverter {
-    private final String TR_VALUESET_ORDER_TYPE_NAME = "Order-Type";
+    private final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROC";
+    private final static String TR_VALUESET_ORDER_TYPE_NAME = "Order-Type";
 
-    private final String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
-    private final String MEDICATION_REQUEST_ENTRY_DISPLAY = "Medication Request";
+    private final static String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
+
+    private final static String MEDICATION_REQUEST_ENTRY_DISPLAY = "Medication Request";
     private final static String PROCEDURE_REQUEST_RESOURCE_DISPLAY = "Procedure Request";
+    private final static String PROVENANCE_PROCEDURE_REQUEST_DISPLAY = "Provenance Procedure Request";
 
     private final IParser stu3Parser;
     private final IParser dstu2Parser;
+    private final String PREVIOUS_PROCEDURE_ORDER_EXTN_URL = "https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest";
     private R2R3ConversionManager r2R3ConversionManager;
     private SHRMigrationProperties shrMigrationProperties;
 
@@ -190,54 +205,120 @@ public class AllResourceConverter {
         }
 
         convertExistingDiagnosticOrdersToProcedureRequests(bundle, composition);
-        for (Map.Entry<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest> entry : procedureRequestHashMap.entrySet()) {
+        convertExistingProcedureRequests(bundle, composition);
+    }
+
+    private void convertExistingProcedureRequests(Bundle bundle, Composition composition) {
+        List<Map.Entry<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest>> cancelledProcedures = procedureRequestHashMap.entrySet().stream().filter(procedureRequestEntry -> {
+            ca.uhn.fhir.model.dstu2.resource.ProcedureRequest procedureRequest = procedureRequestEntry.getValue();
+            return ProcedureRequestStatusEnum.SUSPENDED.getCode().equals(procedureRequest.getStatus());
+        }).collect(Collectors.toList());
+
+        List<Map.Entry<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest>> requestedProcedures = procedureRequestHashMap.entrySet().stream().filter(procedureRequestEntry -> {
+            ca.uhn.fhir.model.dstu2.resource.ProcedureRequest procedureRequest = procedureRequestEntry.getValue();
+            return ProcedureRequestStatusEnum.REQUESTED.getCode().equals(procedureRequest.getStatus());
+        }).collect(Collectors.toList());
+
+
+        for (Map.Entry<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest> entry : requestedProcedures) {
             String fullUrl = entry.getKey();
+            String fullUrlForProvenance = buildProvenanceEntryURL(fullUrl);
             ca.uhn.fhir.model.dstu2.resource.ProcedureRequest source = entry.getValue();
-            ProcedureRequest target = new ProcedureRequest();
+            ProcedureRequest target = convertProcedureRequest(source);
 
-            List<Identifier> identifiers = source.getIdentifier().stream().map(
-                    identifierDt -> new Identifier().setValue(identifierDt.getValue())
-            ).collect(Collectors.toList());
-            target.setIdentifier(identifiers);
-            target.setId(source.getId());
-
-            ResourceReferenceDt sourceSubject = source.getSubject();
-            Reference subject = new Reference(sourceSubject.getReference().getValue());
-            subject.setDisplay(sourceSubject.getDisplay().getValue());
-            target.setSubject(subject);
-            target.setContext(new Reference(source.getEncounter().getReference().getValue()));
-
-            target.setCode(convertCode(source.getCode()));
-            target.setIntent(ORIGINALORDER);
-
-            List<Annotation> annotations = source.getNotes().stream().map(
-                    annotationDt -> new Annotation().setText(annotationDt.getText())).collect(Collectors.toList());
-            target.setNote(annotations);
-
-            target.setAuthoredOn(source.getOrderedOn());
-            target.setPerformer(new Reference(source.getPerformer().getReference().getValue()));
-            ProcedureRequest.ProcedureRequestRequesterComponent requester = new ProcedureRequest.ProcedureRequestRequesterComponent();
-            requester.setAgent(new Reference(source.getOrderer().getReference().getValue()));
-            target.setRequester(requester);
-            ProcedureRequest.ProcedureRequestStatus status;
-
-            if (REQUESTED.getCode().equals(source.getStatus())) {
-                status = ACTIVE;
-            } else if (SUSPENDED.getCode().equals(source.getStatus())){
-                status = CANCELLED;
-            }else {
-                status=  ACTIVE;
-            }
-            target.setStatus(status);
-
-            Bundle.BundleEntryComponent bundleEntryComponent = bundle.addEntry();
-            bundleEntryComponent.setFullUrl(fullUrl);
-            bundleEntryComponent.setResource(target);
-
-            Reference reference = composition.addSection().addEntry();
-            reference.setReference(fullUrl);
-            reference.setDisplay(PROCEDURE_REQUEST_RESOURCE_DISPLAY);
+            Provenance provenance = createProvenance(fullUrl, fullUrlForProvenance, source);
+            addResourceAndProvenanceToBundle(bundle, composition, fullUrl, fullUrlForProvenance, target, provenance);
         }
+
+        for (Map.Entry<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest> entry : cancelledProcedures) {
+            String fullUrl = entry.getKey();
+            String fullUrlForProvenance = buildProvenanceEntryURL(fullUrl);
+            ca.uhn.fhir.model.dstu2.resource.ProcedureRequest source = entry.getValue();
+            ProcedureRequest target = convertProcedureRequest(source);
+
+            List<ExtensionDt> extensions = source.getUndeclaredExtensionsByUrl(PREVIOUS_PROCEDURE_ORDER_EXTN_URL);
+            if (!CollectionUtils.isEmpty(extensions) && !extensions.get(0).getValue().isEmpty()){
+                Reference reference = target.addRelevantHistory();
+                String previousOrderRef = ((StringDt) extensions.get(0).getValue()).getValue();
+                reference.setReference(buildProvenanceEntryURL(previousOrderRef));
+            }
+
+            Provenance provenance = createProvenance(fullUrl, fullUrlForProvenance, source);
+            addResourceAndProvenanceToBundle(bundle, composition, fullUrl, fullUrlForProvenance, target, provenance);
+        }
+    }
+
+    private String buildProvenanceEntryURL(String fullUrl) {
+        return String.format("%s-provenance", fullUrl);
+    }
+
+    private Provenance createProvenance(String fullUrlForTarget, String fullUrlForProvenance, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest source) {
+        Provenance provenance = new Provenance();
+        provenance.setId(fullUrlForProvenance);
+        provenance.addTarget(new Reference(fullUrlForTarget));
+        Provenance.ProvenanceAgentComponent agentComponent = new Provenance.ProvenanceAgentComponent();
+        agentComponent.setWho(new Reference(source.getOrderer().getReference().getValue()));
+        provenance.addAgent(agentComponent);
+        provenance.setRecorded(source.getOrderedOn());
+        return provenance;
+    }
+
+    private void addResourceAndProvenanceToBundle(Bundle bundle, Composition composition, String fullUrlForResource,
+                                                  String fullUrlForProvenance, Resource resourceToAdd, Provenance provenance) {
+        Bundle.BundleEntryComponent bundleEntryComponent = bundle.addEntry();
+        bundleEntryComponent.setFullUrl(fullUrlForResource);
+        bundleEntryComponent.setResource(resourceToAdd);
+
+        Reference reference = composition.addSection().addEntry();
+        reference.setReference(fullUrlForResource);
+        reference.setDisplay(PROCEDURE_REQUEST_RESOURCE_DISPLAY);
+
+        Bundle.BundleEntryComponent bundleEntryProvenanceComponent = bundle.addEntry();
+        bundleEntryProvenanceComponent.setFullUrl(fullUrlForProvenance);
+        bundleEntryProvenanceComponent.setResource(provenance);
+
+        Reference provenanceReference = composition.addSection().addEntry();
+        provenanceReference.setReference(fullUrlForProvenance);
+        provenanceReference.setDisplay(PROVENANCE_PROCEDURE_REQUEST_DISPLAY);
+    }
+
+    private ProcedureRequest convertProcedureRequest(ca.uhn.fhir.model.dstu2.resource.ProcedureRequest source) {
+        ProcedureRequest target = new ProcedureRequest();
+
+        List<Identifier> identifiers = source.getIdentifier().stream().map(
+                identifierDt -> new Identifier().setValue(identifierDt.getValue())
+        ).collect(Collectors.toList());
+        target.setIdentifier(identifiers);
+        target.setId(source.getId());
+
+        ResourceReferenceDt sourceSubject = source.getSubject();
+        Reference subject = new Reference(sourceSubject.getReference().getValue());
+        subject.setDisplay(sourceSubject.getDisplay().getValue());
+        target.setSubject(subject);
+        target.setContext(new Reference(source.getEncounter().getReference().getValue()));
+
+        target.setCode(convertCode(source.getCode()));
+        target.setIntent(ORIGINALORDER);
+
+        List<Annotation> annotations = source.getNotes().stream().map(
+                annotationDt -> new Annotation().setText(annotationDt.getText())).collect(Collectors.toList());
+        target.setNote(annotations);
+
+        target.setAuthoredOn(source.getOrderedOn());
+        ProcedureRequest.ProcedureRequestRequesterComponent requester = new ProcedureRequest.ProcedureRequestRequesterComponent();
+        requester.setAgent(new Reference(source.getOrderer().getReference().getValue()));
+        target.setRequester(requester);
+        ProcedureRequest.ProcedureRequestStatus status;
+
+        if (REQUESTED.getCode().equals(source.getStatus())) {
+            status = ACTIVE;
+        } else if (SUSPENDED.getCode().equals(source.getStatus())) {
+            status = CANCELLED;
+        } else {
+            status = ACTIVE;
+        }
+        target.setStatus(status);
+        return target;
     }
 
     private void convertExistingDiagnosticOrdersToProcedureRequests(Bundle bundle, Composition composition) {

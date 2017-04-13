@@ -7,10 +7,8 @@ import org.mockito.Mock;
 import org.sharedhealth.migrationService.client.ShrClient;
 
 import java.net.URI;
-import java.net.URL;
 
-import static org.apache.logging.log4j.core.util.Loader.getClassLoader;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.sharedhealth.migrationService.helpers.ResourceHelper.asString;

@@ -1,0 +1,113 @@
+<Bundle xmlns="http://hl7.org/fhir">
+    <id value="d4bea2b2-5a11-4a8b-8215-4d0521373532"/>
+    <meta>
+        <lastUpdated value="2017-04-13T13:58:24.000+05:30"/>
+    </meta>
+    <type value="collection"/>
+    <entry>
+        <fullUrl value="urn:uuid:79764a3e-6a76-49cd-b96f-f42c5d9d0983"/>
+        <resource>
+            <Composition xmlns="http://hl7.org/fhir">
+                <identifier>
+                    <value value="urn:uuid:79764a3e-6a76-49cd-b96f-f42c5d9d0983"/>
+                </identifier>
+                <date value="2017-04-13T13:58:24.000+05:30"/>
+                <type>
+                    <coding>
+                        <system value="http://hl7.org/fhir/vs/doc-typecodes"/>
+                        <code value="51899-3"/>
+                        <display value="Details Document"/>
+                    </coding>
+                </type>
+                <title value="Patient Clinical Encounter"/>
+                <status value="final"/>
+                <confidentiality value="N"/>
+                <subject>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001276495"/>
+                    <display value="98001276495"/>
+                </subject>
+                <author>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/facilities/10000137.json"/>
+                </author>
+                <encounter>
+                    <reference value="urn:uuid:c8bf92f5-9115-4163-a766-89bfd5fbc171"/>
+                </encounter>
+                <section>
+                    <entry>
+                        <reference value="urn:uuid:c8bf92f5-9115-4163-a766-89bfd5fbc171"/>
+                        <display value="Encounter"/>
+                    </entry>
+                </section>
+                <section>
+                    <entry>
+                        <reference value="urn:uuid:fe9fe4eb-2b42-40f8-a863-dc11f0940153"/>
+                        <display value="Procedure Request"/>
+                    </entry>
+                </section>
+            </Composition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:c8bf92f5-9115-4163-a766-89bfd5fbc171"/>
+        <resource>
+            <Encounter xmlns="http://hl7.org/fhir">
+                <identifier>
+                    <value value="urn:uuid:c8bf92f5-9115-4163-a766-89bfd5fbc171"/>
+                </identifier>
+                <status value="finished"/>
+                <class value="outpatient"/>
+                <type>
+                    <text value="OPD"/>
+                </type>
+                <patient>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001276495"/>
+                    <display value="98001276495"/>
+                </patient>
+                <participant>
+                    <individual>
+                        <reference value="http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json"/>
+                    </individual>
+                </participant>
+                <period>
+                    <start value="2017-04-13T12:44:37.000+05:30"/>
+                </period>
+                <serviceProvider>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/facilities/10000137.json"/>
+                </serviceProvider>
+            </Encounter>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:fe9fe4eb-2b42-40f8-a863-dc11f0940153"/>
+        <resource>
+            <ProcedureRequest xmlns="http://hl7.org/fhir">
+                <extension
+                        url="https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest">
+                    <valueString value="urn:uuid:2290e403-1233-4f26-a604-c656677d54c3"/>
+                </extension>
+                <identifier>
+                    <value value="urn:uuid:fe9fe4eb-2b42-40f8-a863-dc11f0940153"/>
+                </identifier>
+                <subject>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001276495"/>
+                    <display value="98001276495"/>
+                </subject>
+                <code>
+                    <coding>
+                        <system value="https://tr-showcase.twhosted.com/openmrs/ws/rest/v1/tr/concepts/f73a7a1c-88b1-11e5-8d1e-005056b0145c"/>
+                        <code value="f73a7a1c-88b1-11e5-8d1e-005056b0145c"/>
+                        <display value="Extraction of Lower Tooth Single"/>
+                    </coding>
+                </code>
+                <encounter>
+                    <reference value="urn:uuid:c8bf92f5-9115-4163-a766-89bfd5fbc171"/>
+                </encounter>
+                <status value="suspended"/>
+                <orderedOn value="2017-04-13T14:01:09+05:30"/>
+                <orderer>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json"/>
+                </orderer>
+            </ProcedureRequest>
+        </resource>
+    </entry>
+</Bundle>
