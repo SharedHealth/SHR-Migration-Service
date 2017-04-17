@@ -358,6 +358,8 @@ public class AllResourceConverterTest {
         Bundle.BundleEntryComponent procedureRequestEntry = getFirstEntryOfType(stu3Buble, ResourceType.ProcedureRequest);
         assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
         ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
+        assertEquals("http://tr.com/valuesets/Order-Type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
+        assertEquals("PROC", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
         assertEquals("http://172.18.46.199:8081/api/v1/patients/98001175044", procedureRequest.getSubject().getReference());
         assertEquals("urn:uuid:763dee64-44d5-4820-b9c0-6c51bf1d3fa9", procedureRequest.getContext().getReference());
         assertEquals("http://172.18.46.199:8084/api/1.0/providers/24.json", procedureRequest.getRequester().getAgent().getReference());
@@ -409,9 +411,12 @@ public class AllResourceConverterTest {
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
-        assertEquals(4, composition.getSection().size());
+        assertEquals(7, composition.getSection().size());
         assertEquals(3, composition.getSection().stream().filter(
                 sectionComponent -> "Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
+        ).count());
+        assertEquals(3, composition.getSection().stream().filter(
+                sectionComponent -> "Provenance Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
         ).count());
 
         Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.MedicationRequest);
@@ -448,6 +453,7 @@ public class AllResourceConverterTest {
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
         String s = allResourceConverter.convertBundleToStu3(content);
+        System.out.println(s);
         Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
