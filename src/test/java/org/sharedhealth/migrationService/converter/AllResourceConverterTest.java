@@ -12,6 +12,7 @@ import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 
 import java.io.File;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -26,6 +27,7 @@ import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.sharedhealth.migrationService.converter.FhirBundleUtil.buildProvenanceEntryURL;
 
 public class AllResourceConverterTest {
     private final String trSystem = "http://tr.com";
@@ -44,7 +46,7 @@ public class AllResourceConverterTest {
     }
 
     @Test
-    public void shouldConvertAnBundleWithJustEncounter() throws Exception {
+    public void shouldConvertABundleWithJustEncounter() throws Exception {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_encounter.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
@@ -67,6 +69,7 @@ public class AllResourceConverterTest {
         assertTrue(isPresentInCompositionSection(composition, encounterEntry));
         assertEquals(FINISHED, encounter.getStatus());
         assertEquals("AMB", encounter.getClass_().getCode());
+        assertEquals("http://hl7.org/fhir/v3/ActCode", encounter.getClass_().getSystem());
         assertEquals("http://www.mci.com/patients/98104750156", encounter.getSubject().getReference());
         assertEquals("http://www.pr.com/providers/812.json", encounter.getParticipantFirstRep().getIndividual().getReference());
         assertEquals("http://www.fr.com/facilities/10019841.json", encounter.getServiceProvider().getReference());
@@ -74,7 +77,7 @@ public class AllResourceConverterTest {
     }
 
     @Test
-    public void shouldConvertAnBundleWithComplaint() throws Exception {
+    public void shouldConvertABundleWithComplaint() throws Exception {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_complaint.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
@@ -96,8 +99,6 @@ public class AllResourceConverterTest {
         assertEquals("http://hl7.org/fhir/condition-category", category.getSystem());
         assertEquals("complaint", category.getCode());
 
-        /** Right now this fails. We will wait for converters to take care this.
-         *  If not done we will have to write code**/
         assertEquals(ACTIVE, chiefComplaint.getClinicalStatus());
         assertEquals(PROVISIONAL, chiefComplaint.getVerificationStatus());
         assertTrue(chiefComplaint.getOnset() instanceof Period);
@@ -164,9 +165,11 @@ public class AllResourceConverterTest {
         Coding category = diagnosticReport.getCategory().getCodingFirstRep();
         assertEquals("http://hl7.org/fhir/v2/0074", category.getSystem());
         assertEquals("LAB", category.getCode());
+
         Coding code = diagnosticReport.getCode().getCodingFirstRep();
         assertEquals("HEM", code.getCode());
         assertEquals(trSystem, code.getSystem());
+
         assertEquals(DiagnosticReport.DiagnosticReportStatus.FINAL, diagnosticReport.getStatus());
         assertNotNull(diagnosticReport.getEffective());
         assertNotNull(diagnosticReport.getIssued());
@@ -174,6 +177,7 @@ public class AllResourceConverterTest {
         Bundle.BundleEntryComponent observationEntry = getFirstEntryOfType(stu3Buble, ResourceType.Observation);
         Observation observation = (Observation) observationEntry.getResource();
         assertEquals(diagnosticReport.getResultFirstRep().getReference(), observationEntry.getFullUrl());
+
         Coding observationCode = observation.getCode().getCodingFirstRep();
         assertEquals("HEM", observationCode.getCode());
         assertEquals(trSystem, observationCode.getSystem());
@@ -183,8 +187,6 @@ public class AllResourceConverterTest {
         assertEquals("urn:uuid:85c310fd-1f9d-4c1e-a16b-4e53a636c46d", observation.getContext().getReference());
         assertEquals("http://shr.com/patients/hid/encounters/shrEncounterId3", diagnosticReport.getBasedOnFirstRep().getReference());
 
-        /** Right now this fails. We will wait for converters to take care this.
-         *  If not done we will have to write code**/
         assertEquals("http://pr.com/api/1.0/providers/812.json", diagnosticReport.getPerformerFirstRep().getActor().getReference());
         assertEquals("http://pr.com/api/1.0/providers/812.json", observation.getPerformerFirstRep().getReference());
     }
@@ -217,10 +219,12 @@ public class AllResourceConverterTest {
         assertEquals(trSystem, code.getSystem());
         assertEquals("3", code.getCode());
         assertEquals("Some notes", conditionComponent.getNoteFirstRep().getText());
-
-        /** Right now this fails. We will wait for converters to take care this.
-         *  If not done we will have to write code**/
-        assertTrue(conditionComponent.hasOnset());
+        Age onsetAge = conditionComponent.getOnsetAge();
+        assertFalse(onsetAge.isEmpty());
+        assertEquals(5, onsetAge.getValue().intValue());
+        assertEquals("http://unitsofmeasure.org", onsetAge.getSystem());
+        assertEquals("a", onsetAge.getUnit());
+        assertEquals("a", onsetAge.getCode());
     }
 
     @Test
@@ -269,6 +273,7 @@ public class AllResourceConverterTest {
         Coding route = immunization.getRoute().getCodingFirstRep();
         assertEquals("ORAL-X", route.getCode());
         assertEquals(trSystem, route.getSystem());
+        assertEquals("immunization notes", immunization.getNoteFirstRep().getText());
     }
 
     @Test
@@ -390,7 +395,7 @@ public class AllResourceConverterTest {
         ProcedureRequest cancelledProcedureRequest = (ProcedureRequest) cancelledProcedureRequestEntry.getResource();
         assertEquals(1, cancelledProcedureRequest.getRelevantHistory().size());
         Reference reference = cancelledProcedureRequest.getRelevantHistoryFirstRep();
-        assertEquals(provenanceForNewEntry.getFullUrl(),reference.getReference());
+        assertEquals(provenanceForNewEntry.getFullUrl(), reference.getReference());
 
         Bundle.BundleEntryComponent provenanceForCancelledEntry = getFirstEntryOfType(newBundle, ResourceType.Provenance);
         assertTrue(isPresentInCompositionSection(newComposition, provenanceForCancelledEntry));
@@ -411,15 +416,17 @@ public class AllResourceConverterTest {
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
-        assertEquals(7, composition.getSection().size());
-        assertEquals(3, composition.getSection().stream().filter(
+        assertEquals(9, composition.getSection().size());
+        assertEquals(4, composition.getSection().stream().filter(
                 sectionComponent -> "Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
         ).count());
-        assertEquals(3, composition.getSection().stream().filter(
-                sectionComponent -> "Provenance Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
+        assertEquals(4, composition.getSection().stream().filter(
+                sectionComponent ->
+                        "Provenance Medication Request".equals(sectionComponent.getEntryFirstRep().getDisplay())
         ).count());
 
         Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.MedicationRequest);
+
         streamSupplier.get().forEach(medicationRequestEntry -> {
             assertTrue(isPresentInCompositionSection(composition, medicationRequestEntry));
             MedicationRequest medicationRequest = (MedicationRequest) medicationRequestEntry.getResource();
@@ -431,18 +438,35 @@ public class AllResourceConverterTest {
             assertEquals("Some Notes", medicationRequest.getNoteFirstRep().getText());
         });
 
-        Bundle.BundleEntryComponent newRequestWithNormalDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:654e0c26-3c63-4775-acaa-2be78c77781f");
+        String newRequestWithNormalDosageFullUrl = "urn:uuid:654e0c26-3c63-4775-acaa-2be78c77781f";
+        Bundle.BundleEntryComponent newRequestWithNormalDosageEntry = getEntryByFullUrl(streamSupplier, newRequestWithNormalDosageFullUrl);
         MedicationRequest newRequestWithNormalDosage = (MedicationRequest) newRequestWithNormalDosageEntry.getResource();
-        assertNewRequestWithNormalDoses(newRequestWithNormalDosage);
+        assertRequestWithNormalDoses(newRequestWithNormalDosage, "NEW", null);
 
-        Bundle.BundleEntryComponent newRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:1c626241-674b-4ba3-baac-fcb7769d6555");
+        String revisedRequestWithNormalDosageFullUrl = "urn:uuid:322fdd75-8bb0-4cd8-845f-51c95ffab9f0";
+        Bundle.BundleEntryComponent revisedRequestWithNormalDosageEntry = getEntryByFullUrl(streamSupplier, revisedRequestWithNormalDosageFullUrl);
+        MedicationRequest revisedRequestWithNormalDosage = (MedicationRequest) revisedRequestWithNormalDosageEntry.getResource();
+        assertRequestWithNormalDoses(revisedRequestWithNormalDosage, "REVISE", newRequestWithNormalDosageFullUrl);
+
+        String newRequestWithCustomDosageFullUrl = "urn:uuid:1c626241-674b-4ba3-baac-fcb7769d6555";
+        Bundle.BundleEntryComponent newRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, newRequestWithCustomDosageFullUrl);
         MedicationRequest newRequestWithCustomDosage = (MedicationRequest) newRequestWithCustomDosageEntry.getResource();
-        assertRequestWithCustomDosage(newRequestWithCustomDosage, "NEW");
+        assertRequestWithCustomDosage(newRequestWithCustomDosage, "NEW", null);
 
-        Bundle.BundleEntryComponent stoppedRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, "urn:uuid:858bbf2d-4d6c-4bb0-a42a-85364afa7501");
+        String stoppedRequestWithCustomDosageFullUrl = "urn:uuid:858bbf2d-4d6c-4bb0-a42a-85364afa7501";
+        Bundle.BundleEntryComponent stoppedRequestWithCustomDosageEntry = getEntryByFullUrl(streamSupplier, stoppedRequestWithCustomDosageFullUrl);
         MedicationRequest stoppedRequestWithCustomDosage = (MedicationRequest) stoppedRequestWithCustomDosageEntry.getResource();
-        assertRequestWithCustomDosage(stoppedRequestWithCustomDosage, "DISCONTINUE");
-        assertEquals(stoppedRequestWithCustomDosage.getPriorPrescription().getReference(), newRequestWithCustomDosageEntry.getFullUrl());
+        assertRequestWithCustomDosage(stoppedRequestWithCustomDosage, "DISCONTINUE", newRequestWithCustomDosageFullUrl);
+
+        Supplier<Stream<Bundle.BundleEntryComponent>> provenanceStreamSupplier = () -> getEntriesOfType(stu3Buble, ResourceType.Provenance);
+        assertProvenanceEntry(composition, newRequestWithNormalDosageFullUrl, newRequestWithNormalDosage, provenanceStreamSupplier,
+                "2017-04-06T00:00:00.000+0530", "CREATE", "create", null);
+        assertProvenanceEntry(composition, revisedRequestWithNormalDosageFullUrl, revisedRequestWithNormalDosage, provenanceStreamSupplier,
+                "2017-04-06T00:00:00.000+0530", "UPDATE", "revise", null);
+        assertProvenanceEntry(composition, newRequestWithCustomDosageFullUrl, newRequestWithCustomDosage, provenanceStreamSupplier,
+                "2017-04-06T00:00:00.000+0530", "CREATE", "create", "2017-04-04T14:41:19.000+0530");
+        assertProvenanceEntry(composition, stoppedRequestWithCustomDosageFullUrl, stoppedRequestWithCustomDosage, provenanceStreamSupplier,
+                "2017-04-04T14:41:20.000+0530", "ABORT", "abort", "2017-04-04T14:41:19.000+0530");
     }
 
     @Test
@@ -509,20 +533,20 @@ public class AllResourceConverterTest {
         ).count());
     }
 
-    private void assertRequestWithCustomDosage(MedicationRequest newRequestWithCustomDosage, String expectedAction) throws FHIRException {
-        List<Extension> extensions = newRequestWithCustomDosage.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
+    private void assertRequestWithCustomDosage(MedicationRequest medicationRequest, String expectedAction, String priorPrescription) throws FHIRException {
+        List<Extension> extensions = medicationRequest.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
         assertEquals(expectedAction, ((StringType) extensions.get(0).getValue()).getValue());
 
-        assertEquals(MedicationRequestStatus.STOPPED, newRequestWithCustomDosage.getStatus());
-        Coding medication = newRequestWithCustomDosage.getMedicationCodeableConcept().getCodingFirstRep();
+        assertEquals(MedicationRequestStatus.STOPPED, medicationRequest.getStatus());
+        Coding medication = medicationRequest.getMedicationCodeableConcept().getCodingFirstRep();
         assertEquals(trSystem, medication.getSystem());
         assertEquals("d2d9213f-878d-11e5-95dd-005056b0145c", medication.getCode());
 
-        SimpleQuantity dispenseQuantity = newRequestWithCustomDosage.getDispenseRequest().getQuantity();
+        SimpleQuantity dispenseQuantity = medicationRequest.getDispenseRequest().getQuantity();
         assertEquals(6, dispenseQuantity.getValue().intValue());
         assertEquals("Tablet dose form", dispenseQuantity.getUnit());
 
-        Dosage dosageInstruction = newRequestWithCustomDosage.getDosageInstructionFirstRep();
+        Dosage dosageInstruction = medicationRequest.getDosageInstructionFirstRep();
         List<Extension> dosageInstructionExtensions = dosageInstruction.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#DosageInstructionCustomDosage");
         assertEquals("{\"morningDose\":1.0,\"eveningDose\":2.0}", ((StringType) dosageInstructionExtensions.get(0).getValue()).getValue());
         assertFalse(dosageInstruction.getAsNeededBooleanType().booleanValue());
@@ -543,22 +567,28 @@ public class AllResourceConverterTest {
         assertEquals("BID", code.getCode());
         Timing.TimingRepeatComponent repeat = timing.getRepeat();
         assertNotNull(repeat.getBounds());
+
+        if (null != priorPrescription) {
+            assertEquals(priorPrescription, medicationRequest.getPriorPrescription().getReference());
+        }else {
+            assertTrue(medicationRequest.getPriorPrescription().isEmpty());
+        }
     }
 
-    private void assertNewRequestWithNormalDoses(MedicationRequest newRequestWithNormalDosage) throws FHIRException {
-        List<Extension> extensions = newRequestWithNormalDosage.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
-        assertEquals("NEW", ((StringType) extensions.get(0).getValue()).getValue());
+    private void assertRequestWithNormalDoses(MedicationRequest medicationRequest, String action, String priorPrescription) throws FHIRException {
+        List<Extension> extensions = medicationRequest.getExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction");
+        assertEquals(action, ((StringType) extensions.get(0).getValue()).getValue());
 
-        assertEquals(MedicationRequestStatus.ACTIVE, newRequestWithNormalDosage.getStatus());
-        Coding medication = newRequestWithNormalDosage.getMedicationCodeableConcept().getCodingFirstRep();
+        assertEquals(MedicationRequestStatus.ACTIVE, medicationRequest.getStatus());
+        Coding medication = medicationRequest.getMedicationCodeableConcept().getCodingFirstRep();
         assertEquals(trSystem, medication.getSystem());
         assertEquals("d2d98d73-878d-11e5-95dd-005056b0145c", medication.getCode());
 
-        SimpleQuantity dispenseQuantity = newRequestWithNormalDosage.getDispenseRequest().getQuantity();
+        SimpleQuantity dispenseQuantity = medicationRequest.getDispenseRequest().getQuantity();
         assertEquals(2, dispenseQuantity.getValue().intValue());
         assertEquals("Teaspoonful - unit of product", dispenseQuantity.getUnit());
 
-        Dosage dosageInstruction = newRequestWithNormalDosage.getDosageInstructionFirstRep();
+        Dosage dosageInstruction = medicationRequest.getDosageInstructionFirstRep();
         assertFalse(dosageInstruction.getAsNeededBooleanType().booleanValue());
         Coding route = dosageInstruction.getRoute().getCodingFirstRep();
         assertEquals(trSystem, route.getSystem());
@@ -577,10 +607,13 @@ public class AllResourceConverterTest {
         assertEquals(2, repeat.getFrequency());
         assertEquals(1, repeat.getPeriod().intValue());
         assertEquals(D, repeat.getPeriodUnit());
-
-        /** Right now this fails. We will wait for converters to take care this.
-         *  If not done we will have to write code**/
         assertNotNull(repeat.getBounds());
+
+        if (null != priorPrescription) {
+            assertEquals(priorPrescription, medicationRequest.getPriorPrescription().getReference());
+        }else {
+            assertTrue(medicationRequest.getPriorPrescription().isEmpty());
+        }
     }
 
     private Bundle.BundleEntryComponent getEntryByFullUrl(Supplier<Stream<Bundle.BundleEntryComponent>> streamSupplier, String fullUrl) {
@@ -602,6 +635,33 @@ public class AllResourceConverterTest {
     }
 
     private Stream<Bundle.BundleEntryComponent> getEntriesOfType(Bundle stu3Buble, ResourceType resourceType) {
-        return stu3Buble.getEntry().stream().filter(component -> component.getResource().getResourceType().equals(resourceType));
+        return stu3Buble.getEntry().stream().filter(component ->
+                component.getResource().getResourceType().equals(resourceType)
+        );
+    }
+
+    private void assertProvenanceEntry(Composition composition, String fullUrl, MedicationRequest medicationRequest,
+                                       Supplier<Stream<Bundle.BundleEntryComponent>> provenanceStreamSupplier,
+                                       String startDate, String activityCode, String activityDisplay, Object endDate) throws FHIRException {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ");
+
+        Bundle.BundleEntryComponent provenanceEntry = getEntryByFullUrl(provenanceStreamSupplier, buildProvenanceEntryURL(fullUrl));
+        Provenance provenance = (Provenance) provenanceEntry.getResource();
+        assertTrue(isPresentInCompositionSection(composition, provenanceEntry));
+        assertEquals(fullUrl, provenance.getTargetFirstRep().getReference());
+
+        Coding activity = provenance.getActivity();
+        assertEquals("http://hl7.org/fhir/v3/DataOperation", activity.getSystem());
+        assertEquals(activityCode, activity.getCode());
+        assertEquals(activityDisplay, activity.getDisplay());
+        assertEquals(medicationRequest.getAuthoredOn(), provenance.getRecorded());
+        assertEquals(medicationRequest.getRequester().getAgent().getReference(), provenance.getAgentFirstRep().getWhoReference().getReference());
+
+        assertEquals(startDate, simpleDateFormat.format(provenance.getPeriod().getStart()));
+        if (null == endDate) {
+            assertNull(provenance.getPeriod().getEnd());
+        } else {
+            assertEquals(endDate, simpleDateFormat.format(provenance.getPeriod().getEnd()));
+        }
     }
 }

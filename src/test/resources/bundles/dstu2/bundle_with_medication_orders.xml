@@ -46,6 +46,12 @@
                 </section>
                 <section>
                     <entry>
+                        <reference value="urn:uuid:322fdd75-8bb0-4cd8-845f-51c95ffab9f0"/>
+                        <display value="Medication Order"/>
+                    </entry>
+                </section>
+                <section>
+                    <entry>
                         <reference value="urn:uuid:654e0c26-3c63-4775-acaa-2be78c77781f"/>
                         <display value="Medication Order"/>
                     </entry>
@@ -101,7 +107,7 @@
                 </identifier>
                 <dateWritten value="2017-04-04T14:41:20+05:30"/>
                 <status value="stopped"/>
-                <dateEnded value="2017-04-04T14:41:20.000+05:30"/>
+                <dateEnded value="2017-04-04T14:41:19.000+05:30"/>
                 <patient>
                     <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001462467"/>
                     <display value="98001462467"/>
@@ -163,6 +169,79 @@
                 </dispenseRequest>
                 <priorPrescription>
                     <reference value="urn:uuid:1c626241-674b-4ba3-baac-fcb7769d6555"/>
+                </priorPrescription>
+                <note value="Some Notes"/>
+            </MedicationOrder>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="urn:uuid:322fdd75-8bb0-4cd8-845f-51c95ffab9f0"/>
+        <resource>
+            <MedicationOrder xmlns="http://hl7.org/fhir">
+                <extension url="https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#MedicationOrderAction">
+                    <valueString value="REVISE"/>
+                </extension>
+                <identifier>
+                    <value value="urn:uuid:322fdd75-8bb0-4cd8-845f-51c95ffab9f0"/>
+                </identifier>
+                <dateWritten value="2017-04-18T11:16:20+05:30"/>
+                <status value="active"/>
+                <patient>
+                    <reference value="https://mci-showcase.twhosted.com/api/default/patients/98001462467"/>
+                    <display value="98001462467"/>
+                </patient>
+                <prescriber>
+                    <reference value="http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json"/>
+                </prescriber>
+                <encounter>
+                    <reference value="urn:uuid:df0b047a-6b5f-4953-a37d-e95532f540aa"/>
+                </encounter>
+                <medicationCodeableConcept>
+                    <coding>
+                        <system value="http://tr.com"/>
+                        <code value="d2d98d73-878d-11e5-95dd-005056b0145c"/>
+                        <display value="Paracetamol Suspension (120 mg/ 5 ml) 60 ml"/>
+                    </coding>
+                </medicationCodeableConcept>
+                <dosageInstruction>
+                    <timing>
+                        <extension url="https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#TimingScheduledDate">
+                            <valueDateTime value="2017-04-06T00:00:00.000+05:30"/>
+                        </extension>
+                        <repeat>
+                            <boundsQuantity>
+                                <value value="1"/>
+                                <system value="http://unitsofmeasure.org"/>
+                                <code value="d"/>
+                            </boundsQuantity>
+                            <frequency value="2"/>
+                            <period value="1"/>
+                            <periodUnits value="d"/>
+                        </repeat>
+                    </timing>
+                    <asNeededBoolean value="false"/>
+                    <route>
+                        <coding>
+                            <system value="http://tr.com"/>
+                            <code value="_OralRoute"/>
+                            <display value="OralRoute"/>
+                        </coding>
+                    </route>
+                    <doseQuantity>
+                        <value value="1"/>
+                        <unit value="Teaspoonful - unit of product"/>
+                        <system value="http://tr.com"/>
+                        <code value="415703001"/>
+                    </doseQuantity>
+                </dosageInstruction>
+                <dispenseRequest>
+                    <quantity>
+                        <value value="2.0"/>
+                        <unit value="Teaspoonful - unit of product"/>
+                    </quantity>
+                </dispenseRequest>
+                <priorPrescription>
+                    <reference value="urn:uuid:654e0c26-3c63-4775-acaa-2be78c77781f"/>
                 </priorPrescription>
                 <note value="Some Notes"/>
             </MedicationOrder>

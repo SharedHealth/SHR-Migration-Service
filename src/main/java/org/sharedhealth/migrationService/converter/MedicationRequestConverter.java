@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.PROVENANCE_MEDICATION_REQUEST_DISPLAY;
 import static org.sharedhealth.migrationService.converter.FhirBundleUtil.buildProvenanceEntryURL;
@@ -41,12 +40,15 @@ public class MedicationRequestConverter {
             provenance.addAgent(agentComponent);
             provenance.setRecorded(medicationRequest.getAuthoredOn());
 
-
             List<Extension> scheduledDateExtensions = medicationRequest.getDosageInstructionFirstRep().getTiming()
                     .getExtensionsByUrl(MEDICATION_ORDER_SCHEDULED_DATE_EXTENSION_URL);
             if (!CollectionUtils.isEmpty(scheduledDateExtensions)) {
                 DateTimeType dateTimeType = (DateTimeType) scheduledDateExtensions.get(0).getValue();
                 provenance.getPeriod().setStart(dateTimeType.getValue());
+            }
+            Date dateEnded = medicationOrder.getDateEnded();
+            if (null != dateEnded){
+                provenance.getPeriod().setEnd(dateEnded);
             }
 
             List<Extension> actionExtensions = medicationRequest.getExtensionsByUrl(MEDICATION_ORDER_ACTION_EXTENSION_URL);
@@ -56,12 +58,11 @@ public class MedicationRequestConverter {
                 if (MEDICATION_ORDER_ACTION_NEW.equals(action)) {
                     Coding coding = new Coding("http://hl7.org/fhir/v3/DataOperation", "CREATE", "create");
                     provenance.setActivity(coding);
+                    //todo: no relavantHistory
                 } else if (MEDICATION_ORDER_ACTION_REVISE.equals(action)) {
                     Coding coding = new Coding("http://hl7.org/fhir/v3/DataOperation", "UPDATE", "revise");
                     provenance.setActivity(coding);
                 } else if (MEDICATION_ORDER_ACTION_DISCONTINUE.equals(action)) {
-                    Date dateEnded = medicationOrder.getDateEnded();
-                    provenance.getPeriod().setEnd(dateEnded);
                     Coding coding = new Coding("http://hl7.org/fhir/v3/DataOperation", "ABORT", "abort");
                     provenance.setActivity(coding);
                 }

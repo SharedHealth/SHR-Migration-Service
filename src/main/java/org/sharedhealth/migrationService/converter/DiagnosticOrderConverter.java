@@ -7,7 +7,6 @@ import ca.uhn.fhir.model.dstu2.composite.ResourceReferenceDt;
 import ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder;
 import ca.uhn.fhir.model.dstu2.valueset.DiagnosticOrderStatusEnum;
 import ca.uhn.fhir.model.primitive.StringDt;
-import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.dstu3.model.*;
 import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 import org.springframework.util.CollectionUtils;
@@ -22,6 +21,7 @@ import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.C
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.PROCEDURE_REQUEST_RESOURCE_DISPLAY;
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.TR_VALUESET_ORDER_TYPE_NAME;
 import static org.sharedhealth.migrationService.converter.FhirBundleUtil.convertCode;
+import static org.sharedhealth.migrationService.converter.FhirBundleUtil.getConceptCodingDt;
 
 public class DiagnosticOrderConverter {
 
@@ -41,8 +41,8 @@ public class DiagnosticOrderConverter {
                 extension.setUrl("http://hl7.org/fhir/diagnosticorder-r2-marker").setValue(new BooleanType(true));
 
                 List<IdentifierDt> identifier = diagnosticOrder.getIdentifier();
-                String codeForConceptCoding = getCodeForConceptCoding(item);
-                codeForConceptCoding = codeForConceptCoding != null ? codeForConceptCoding : String.valueOf(count++);
+                CodingDt conceptCoding = getConceptCodingDt(item.getCode().getCoding());
+                String codeForConceptCoding = conceptCoding != null ? conceptCoding.getCode() : String.valueOf(count++);
                 String fullUrl = String.format("%s#%s", identifier.get(0).getValue(), codeForConceptCoding);
 
                 procedureRequest.addIdentifier().setValue(fullUrl);
@@ -90,14 +90,4 @@ public class DiagnosticOrderConverter {
     private static boolean hasCancelledEvent(ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item) {
         return item.getEvent().stream().anyMatch(event -> event.getStatus().equals(DiagnosticOrderStatusEnum.CANCELLED.getCode()));
     }
-
-    private static String getCodeForConceptCoding(ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item) {
-        for (CodingDt codingDt : item.getCode().getCoding()) {
-            if (StringUtils.isNotBlank(codingDt.getSystem()) && codingDt.getSystem().contains("/tr/concepts/")) {
-                return codingDt.getCode();
-            }
-        }
-        return null;
-    }
-
 }
