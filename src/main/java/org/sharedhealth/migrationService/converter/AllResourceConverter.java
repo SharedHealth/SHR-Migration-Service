@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.Boolean.FALSE;
 import static org.sharedhealth.migrationService.converter.DiagnosticOrderConverter.convertExistingDiagnosticOrders;
 import static org.sharedhealth.migrationService.converter.FhirBundleUtil.getConceptCodingDt;
 import static org.sharedhealth.migrationService.converter.MedicationRequestConverter.convertExistingMedicationOrders;
@@ -35,7 +36,7 @@ import static org.sharedhealth.migrationService.converter.XMLParser.removeExisti
 
 @Component
 public class AllResourceConverter {
-    public final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROC";
+    public final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROCEDURE";
     public final static String TR_VALUESET_ORDER_TYPE_NAME = "Order-Type";
 
     private final static String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
@@ -58,6 +59,7 @@ public class AllResourceConverter {
     private Map<String, ResourceReferenceDt> diagnosticReportPerformerMap;
     private Map<String, String> conditionClinicalStatusMap;
     private Map<String, ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory> familyMemberHistoryMap;
+    private Map<String, Boolean> immunizationReportedMap;
 
     @Autowired
     public AllResourceConverter(SHRMigrationProperties migrationProperties) throws IOException, FHIRException {
@@ -77,6 +79,7 @@ public class AllResourceConverter {
         conditionClinicalStatusMap = new HashMap<>();
         diagnosticReportPerformerMap = new HashMap<>();
         familyMemberHistoryMap = new HashMap<>();
+        immunizationReportedMap = new HashMap<>();
 
 
         dstu2BundleContent = makeChangesToExistingContent(dstu2BundleContent);
@@ -118,6 +121,10 @@ public class AllResourceConverter {
                 if (StringUtils.isNotBlank(condition.getClinicalStatus()) && ConditionClinicalStatusCodesEnum.ACTIVE.getCode().equals(condition.getClinicalStatus())) {
                     conditionClinicalStatusMap.put(entry.getFullUrl(), condition.getClinicalStatus());
                 }
+            }
+            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.Immunization) {
+                ca.uhn.fhir.model.dstu2.resource.Immunization immunization = (ca.uhn.fhir.model.dstu2.resource.Immunization) entry.getResource();
+                immunizationReportedMap.put(entry.getFullUrl(), immunization.getReported());
             }
         }
 
@@ -167,8 +174,13 @@ public class AllResourceConverter {
                     condition.setClinicalStatus(Condition.ConditionClinicalStatus.ACTIVE);
                 }
             }
+            if (entry.getResource() instanceof Immunization) {
+                Immunization immunization = (Immunization) entry.getResource();
+                Boolean value = immunizationReportedMap.get(entry.getFullUrl());
+                value = (value != null) ? value : FALSE;
+                immunization.setPrimarySource(!value);
+            }
             addOnsetToFamilyMemberCondition(entry);
-
         }
 
         convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
@@ -207,7 +219,9 @@ public class AllResourceConverter {
                     return newCondition;
                 }
             }
-            if ((null != existingConceptCoding && null == newConceptCoding) || (null == existingConceptCoding && null != newConceptCoding)) continue;
+            boolean existingTRConceptOnly = null != existingConceptCoding && null == newConceptCoding;
+            boolean newTRConceptOnly = null == existingConceptCoding && null != newConceptCoding;
+            if (existingTRConceptOnly || newTRConceptOnly) continue;
             if (newConceptCoding.getCode().equals(existingConceptCoding.getCode()) && newConceptCoding.getSystem().equals(existingConceptCoding.getSystem())) {
                 return newCondition;
             }

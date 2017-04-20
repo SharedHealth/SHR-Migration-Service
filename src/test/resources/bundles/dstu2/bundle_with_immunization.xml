@@ -98,7 +98,7 @@
                     <display value="98104750156"/>
                 </patient>
                 <wasNotGiven value="false"/>
-                <reported value="true"/>
+                <reported value="false"/>
 
                 <requester>
                     <reference value="http://www.pr.com/providers/812.json"/>

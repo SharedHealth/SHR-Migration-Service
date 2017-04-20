@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 import static ca.uhn.fhir.model.dstu2.valueset.ProcedureRequestStatusEnum.REQUESTED;
 import static ca.uhn.fhir.model.dstu2.valueset.ProcedureRequestStatusEnum.SUSPENDED;
-import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORDER;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.ACTIVE;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.*;
@@ -82,7 +82,7 @@ public class ProcedureRequestConverter {
         target.setContext(new Reference(source.getEncounter().getReference().getValue()));
 
         target.setCode(convertCode(source.getCode()));
-        target.setIntent(ORIGINALORDER);
+        target.setIntent(ORDER);
 
         CodeableConcept codeableConcept = target.addCategory();
         Coding coding = codeableConcept.addCoding();

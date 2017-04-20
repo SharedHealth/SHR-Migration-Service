@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORDER;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.ACTIVE;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.PROCEDURE_REQUEST_RESOURCE_DISPLAY;
@@ -24,13 +24,18 @@ import static org.sharedhealth.migrationService.converter.FhirBundleUtil.convert
 import static org.sharedhealth.migrationService.converter.FhirBundleUtil.getConceptCodingDt;
 
 public class DiagnosticOrderConverter {
+    private static final String DIAGNOSTIC_ORDER_R2_EXTENSION = "http://hl7.org/fhir/diagnosticorder-r2-marker";
 
-    public static void convertExistingDiagnosticOrders(Map<String, DiagnosticOrder> diagnosticOrderHashMap, Bundle bundle, Composition composition, SHRMigrationProperties migrationProperties) {
+    public static void convertExistingDiagnosticOrders(Map<String, DiagnosticOrder> diagnosticOrderHashMap,
+                                                       Bundle bundle, Composition composition, SHRMigrationProperties migrationProperties) {
         for (Map.Entry<String, DiagnosticOrder> entry : diagnosticOrderHashMap.entrySet()) {
             ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder diagnosticOrder = entry.getValue();
             List<ExtensionDt> orderCategoryExtensions = diagnosticOrder.getUndeclaredExtensionsByUrl("https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#DiagnosticOrderCategory");
             String orderCategoryCode = !CollectionUtils.isEmpty(orderCategoryExtensions) ?
                     ((StringDt) orderCategoryExtensions.get(0).getValue()).getValue() : "LAB";
+            if (!"LAB".equals(orderCategoryCode) && !"RAD".equals(orderCategoryCode)) {
+                throw new RuntimeException(String.format("Unknown Diagnostic Order Category %s", orderCategoryCode));
+            }
             ProcedureRequest.ProcedureRequestStatus status = DiagnosticOrderStatusEnum.REQUESTED.getCode().equals(diagnosticOrder.getStatus()) ? ACTIVE : CANCELLED;
             int count = 1;
             for (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder.Item item : diagnosticOrder.getItem()) {
@@ -38,7 +43,7 @@ public class DiagnosticOrderConverter {
 
                 ProcedureRequest procedureRequest = new ProcedureRequest();
                 Extension extension = procedureRequest.addExtension();
-                extension.setUrl("http://hl7.org/fhir/diagnosticorder-r2-marker").setValue(new BooleanType(true));
+                extension.setUrl(DIAGNOSTIC_ORDER_R2_EXTENSION).setValue(new BooleanType(true));
 
                 List<IdentifierDt> identifier = diagnosticOrder.getIdentifier();
                 CodingDt conceptCoding = getConceptCodingDt(item.getCode().getCoding());
@@ -65,7 +70,7 @@ public class DiagnosticOrderConverter {
 
                 procedureRequest.setAuthoredOn(item.getEventFirstRep().getDateTime());
                 procedureRequest.setStatus(status);
-                procedureRequest.setIntent(ORIGINALORDER);
+                procedureRequest.setIntent(ORDER);
                 procedureRequest.setCode(convertCode(item.getCode()));
                 org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestRequesterComponent component = new org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestRequesterComponent();
                 component.setAgent(new Reference(diagnosticOrder.getOrderer().getReference().getValue()));

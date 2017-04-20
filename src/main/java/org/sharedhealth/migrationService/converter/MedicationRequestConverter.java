@@ -58,7 +58,6 @@ public class MedicationRequestConverter {
                 if (MEDICATION_ORDER_ACTION_NEW.equals(action)) {
                     Coding coding = new Coding("http://hl7.org/fhir/v3/DataOperation", "CREATE", "create");
                     provenance.setActivity(coding);
-                    //todo: no relavantHistory
                 } else if (MEDICATION_ORDER_ACTION_REVISE.equals(action)) {
                     Coding coding = new Coding("http://hl7.org/fhir/v3/DataOperation", "UPDATE", "revise");
                     provenance.setActivity(coding);

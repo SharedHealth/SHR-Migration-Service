@@ -22,7 +22,7 @@ import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.CON
 import static org.hl7.fhir.dstu3.model.Condition.ConditionVerificationStatus.PROVISIONAL;
 import static org.hl7.fhir.dstu3.model.Encounter.EncounterStatus.FINISHED;
 import static org.hl7.fhir.dstu3.model.Observation.ObservationStatus.PRELIMINARY;
-import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORIGINALORDER;
+import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.ORDER;
 import static org.hl7.fhir.dstu3.model.Timing.UnitsOfTime.D;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -246,6 +246,7 @@ public class AllResourceConverterTest {
         assertEquals("http://www.mci.com/patients/98104750156", immunization.getPatient().getReference());
         assertEquals("urn:uuid:de711fc8-3b1b-4089-813e-1ae8b3936ea8", immunization.getEncounter().getReference());
 
+        assertTrue(immunization.getPrimarySource());
         assertEquals(Immunization.ImmunizationStatus.COMPLETED, immunization.getStatus());
         assertNotNull(immunization.getDate());
 
@@ -310,7 +311,7 @@ public class AllResourceConverterTest {
     }
 
     @Test
-    public void shouldConvertABundleWithProcedureFullfilment() throws Exception {
+    public void shouldConvertABundleWithProcedureFulfilment() throws Exception {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_fullfilment.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
@@ -354,17 +355,18 @@ public class AllResourceConverterTest {
         URL requestedProcedure = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request_new.xml");
         String requestedProcedureContent = FileUtils.readFileToString(new File(requestedProcedure.getFile()), "UTF-8");
 
-        Bundle stu3Buble = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(requestedProcedureContent));
+        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(requestedProcedureContent));
 
-        Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
+        Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
         assertEquals(3, composition.getSection().size());
 
-        Bundle.BundleEntryComponent procedureRequestEntry = getFirstEntryOfType(stu3Buble, ResourceType.ProcedureRequest);
+        Bundle.BundleEntryComponent procedureRequestEntry = getFirstEntryOfType(stu3Bundle, ResourceType.ProcedureRequest);
         assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
         ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
+        assertEquals(ORDER, procedureRequest.getIntent());
         assertEquals("http://tr.com/valuesets/Order-Type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
-        assertEquals("PROC", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
+        assertEquals("PROCEDURE", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
         assertEquals("http://172.18.46.199:8081/api/v1/patients/98001175044", procedureRequest.getSubject().getReference());
         assertEquals("urn:uuid:763dee64-44d5-4820-b9c0-6c51bf1d3fa9", procedureRequest.getContext().getReference());
         assertEquals("http://172.18.46.199:8084/api/1.0/providers/24.json", procedureRequest.getRequester().getAgent().getReference());
@@ -374,7 +376,7 @@ public class AllResourceConverterTest {
         assertNotNull(procedureRequest.getAuthoredOn());
         assertEquals("Some Notes", procedureRequest.getNoteFirstRep().getText());
 
-        Bundle.BundleEntryComponent provenanceForNewEntry = getFirstEntryOfType(stu3Buble, ResourceType.Provenance);
+        Bundle.BundleEntryComponent provenanceForNewEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Provenance);
         assertTrue(isPresentInCompositionSection(composition, provenanceForNewEntry));
         Provenance provenanceForNew = (Provenance) provenanceForNewEntry.getResource();
         assertEquals(procedureRequestEntry.getFullUrl(), provenanceForNew.getTargetFirstRep().getReference());
@@ -477,7 +479,6 @@ public class AllResourceConverterTest {
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
         String s = allResourceConverter.convertBundleToStu3(content);
-        System.out.println(s);
         Bundle stu3Buble = (Bundle) xmlParser.parseResource(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Buble, ResourceType.Composition);
@@ -497,7 +498,7 @@ public class AllResourceConverterTest {
             assertEquals("urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad", procedureRequest.getContext().getReference());
             assertEquals("http://hrmtest.dghs.gov.bd/api/1.0/providers/22651.json", procedureRequest.getRequester().getAgent().getReference());
             assertNotNull(procedureRequest.getAuthoredOn());
-            assertEquals(ORIGINALORDER, procedureRequest.getIntent());
+            assertEquals(ORDER, procedureRequest.getIntent());
         });
 
         String fullUrl1 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#d10a0e4e-878d-11e5-95dd-005056b0145c";
@@ -570,7 +571,7 @@ public class AllResourceConverterTest {
 
         if (null != priorPrescription) {
             assertEquals(priorPrescription, medicationRequest.getPriorPrescription().getReference());
-        }else {
+        } else {
             assertTrue(medicationRequest.getPriorPrescription().isEmpty());
         }
     }
@@ -611,7 +612,7 @@ public class AllResourceConverterTest {
 
         if (null != priorPrescription) {
             assertEquals(priorPrescription, medicationRequest.getPriorPrescription().getReference());
-        }else {
+        } else {
             assertTrue(medicationRequest.getPriorPrescription().isEmpty());
         }
     }
