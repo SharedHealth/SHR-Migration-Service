@@ -30,6 +30,7 @@ import java.util.Map;
 import static java.lang.Boolean.FALSE;
 import static org.sharedhealth.migrationService.converter.DiagnosticOrderConverter.convertExistingDiagnosticOrders;
 import static org.sharedhealth.migrationService.converter.FhirBundleUtil.getConceptCodingDt;
+import static org.sharedhealth.migrationService.converter.FhirBundleUtil.getTrValuesetUrl;
 import static org.sharedhealth.migrationService.converter.MedicationRequestConverter.convertExistingMedicationOrders;
 import static org.sharedhealth.migrationService.converter.ProcedureRequestConverter.convertExistingProcedureRequests;
 import static org.sharedhealth.migrationService.converter.XMLParser.removeExistingDiagnosticOrderFromBundleContent;
@@ -38,15 +39,16 @@ import static org.sharedhealth.migrationService.converter.XMLParser.removeExisti
 public class AllResourceConverter {
     public final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROCEDURE";
     public final static String TR_VALUESET_ORDER_TYPE_NAME = "Order-Type";
+    public final static String TR_VALUESET_CONDITION_CATEGORY_NAME = "condition-category";
+    private final static String FHIR_VALUESET_CONDITION_CATEGORY_URL = "http://hl7.org/fhir/condition-category";
 
     private final static String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
-
     public final static String MEDICATION_REQUEST_ENTRY_DISPLAY = "Medication Request";
     public final static String PROCEDURE_REQUEST_RESOURCE_DISPLAY = "Procedure Request";
     public final static String PROVENANCE_PROCEDURE_REQUEST_DISPLAY = "Provenance Procedure Request";
     public final static String PROVENANCE_MEDICATION_REQUEST_DISPLAY = "Provenance Medication Request";
-    public final static String PREVIOUS_PROCEDURE_ORDER_EXTN_URL = "https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest";
 
+    public final static String PREVIOUS_PROCEDURE_ORDER_EXTN_URL = "https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest";
     private final IParser stu3Parser;
     private final IParser dstu2Parser;
     private R2R3ConversionManager r2R3ConversionManager;
@@ -168,24 +170,34 @@ public class AllResourceConverter {
                 String performerRef = diagnosticReportPerformerMap.get(entry.getFullUrl()).getReference().getValue();
                 performerComponent.setActor(new Reference(performerRef));
             }
-            if (entry.getResource() instanceof Condition) {
-                Condition condition = (Condition) entry.getResource();
-                if (conditionClinicalStatusMap.containsKey(entry.getFullUrl())) {
-                    condition.setClinicalStatus(Condition.ConditionClinicalStatus.ACTIVE);
-                }
-            }
             if (entry.getResource() instanceof Immunization) {
                 Immunization immunization = (Immunization) entry.getResource();
                 Boolean value = immunizationReportedMap.get(entry.getFullUrl());
                 value = (value != null) ? value : FALSE;
                 immunization.setPrimarySource(!value);
             }
+            makeChangesForCondition(entry);
             addOnsetToFamilyMemberCondition(entry);
         }
 
         convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
         convertExistingProcedureRequests(procedureRequestMap, bundle, composition, shrMigrationProperties);
         convertExistingMedicationOrders(medicationOrderMap, bundle, composition);
+    }
+
+    private void makeChangesForCondition(Bundle.BundleEntryComponent entry) {
+        if (entry.getResource() instanceof Condition) {
+            Condition condition = (Condition) entry.getResource();
+            if (conditionClinicalStatusMap.containsKey(entry.getFullUrl())) {
+                condition.setClinicalStatus(Condition.ConditionClinicalStatus.ACTIVE);
+            }
+            CodeableConcept category = condition.getCategoryFirstRep();
+            if (category.isEmpty()) return;
+            Coding coding = category.getCodingFirstRep();
+            if (coding.isEmpty()) return;
+            if (!coding.getSystem().equals(FHIR_VALUESET_CONDITION_CATEGORY_URL)) return;
+            coding.setSystem(getTrValuesetUrl(shrMigrationProperties, TR_VALUESET_CONDITION_CATEGORY_NAME));
+        }
     }
 
     private void addOnsetToFamilyMemberCondition(Bundle.BundleEntryComponent entry) {
@@ -196,7 +208,7 @@ public class AllResourceConverter {
             for (ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory.Condition existingCondition : existingFamilyMemberHistory.getCondition()) {
                 FamilyMemberHistory.FamilyMemberHistoryConditionComponent condition = getMatchingCondition(familyMemberHistory, existingCondition);
                 IDatatype onset = existingCondition.getOnset();
-                if (null == condition || onset.isEmpty() || !(onset instanceof QuantityDt)) continue;
+                if (null == onset || onset.isEmpty() || !(onset instanceof QuantityDt)) continue;
                 QuantityDt onsetQuantity = (QuantityDt) onset;
                 Age age = new Age();
                 age.setCode(onsetQuantity.getUnit());

@@ -20,8 +20,7 @@ import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestIntent.O
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.ACTIVE;
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
 import static org.sharedhealth.migrationService.converter.AllResourceConverter.*;
-import static org.sharedhealth.migrationService.converter.FhirBundleUtil.buildProvenanceEntryURL;
-import static org.sharedhealth.migrationService.converter.FhirBundleUtil.convertCode;
+import static org.sharedhealth.migrationService.converter.FhirBundleUtil.*;
 
 public class ProcedureRequestConverter {
     public static void convertExistingProcedureRequests(Map<String, ProcedureRequest> procedureRequestHashMap, Bundle bundle,
@@ -86,7 +85,7 @@ public class ProcedureRequestConverter {
 
         CodeableConcept codeableConcept = target.addCategory();
         Coding coding = codeableConcept.addCoding();
-        coding.setSystem(String.format("%s%s", migrationProperties.getTrValuesetUri(), TR_VALUESET_ORDER_TYPE_NAME));
+        coding.setSystem(getTrValuesetUrl(migrationProperties, TR_VALUESET_ORDER_TYPE_NAME));
         coding.setCode(TR_PROCEDURE_ORDER_TYPE_CODE);
 
         List<Annotation> annotations = source.getNotes().stream().map(

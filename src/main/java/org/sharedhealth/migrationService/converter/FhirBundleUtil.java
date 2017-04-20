@@ -5,6 +5,7 @@ import ca.uhn.fhir.model.dstu2.composite.CodingDt;
 import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
 import org.hl7.fhir.dstu3.model.Coding;
+import org.sharedhealth.migrationService.config.SHRMigrationProperties;
 
 import java.util.List;
 
@@ -34,6 +35,10 @@ public class FhirBundleUtil {
         return codings.stream().filter(
                 coding -> StringUtils.isNotBlank(coding.getSystem()) && coding.getSystem().contains(TR_CONCEPT_URI_PART)
         ).findFirst().orElse(null);
+    }
+
+    public static String getTrValuesetUrl(SHRMigrationProperties migrationProperties, String valuesetName) {
+        return String.format("%s%s", migrationProperties.getTrValuesetUri(), valuesetName);
     }
 
 
