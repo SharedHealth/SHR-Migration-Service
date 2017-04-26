@@ -15,7 +15,7 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="org.sharedhealth.migrationService" level="${env:LOG_LEVEL}" additivity="false">
+        <Logger name="org.sharedhealth.migrationservice" level="${env:LOG_LEVEL}" additivity="false">
             <appender-ref ref="VAR_LOG"/>
         </Logger>
     </Loggers>
