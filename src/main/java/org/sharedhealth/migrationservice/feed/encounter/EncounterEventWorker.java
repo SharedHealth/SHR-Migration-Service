@@ -1,6 +1,7 @@
 package org.sharedhealth.migrationservice.feed.encounter;
 
 import org.sharedhealth.migrationservice.converter.AllResourceConverter;
+import org.sharedhealth.migrationservice.model.EncounterDetails;
 import org.sharedhealth.migrationservice.persistent.EncounterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,8 +18,9 @@ public class EncounterEventWorker {
     }
 
     public void process(String dstu2Bundle, String encounterId) {
+        EncounterDetails encounterDetails = encounterRepository.getByEncounterId(encounterId);
         String stu3Bundle = this.allResourceConverter.convertBundleToStu3(dstu2Bundle, encounterId);
-        encounterRepository.save(stu3Bundle, encounterId);
+        encounterRepository.save(stu3Bundle, encounterDetails);
     }
 
 }
