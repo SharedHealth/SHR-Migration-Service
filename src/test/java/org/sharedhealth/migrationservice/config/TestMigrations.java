@@ -6,7 +6,6 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.impl.CassandraMutagenImpl;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
@@ -92,4 +91,4 @@ public class TestMigrations {
         cluster.close();
     }
 
-    }
+}

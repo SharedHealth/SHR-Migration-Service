@@ -44,7 +44,8 @@ public class SHREnvironmentMock implements ApplicationContextInitializer<Configu
                 env.put(property.toString(), properties.getProperty(property.toString()));
             }
             propertySources.replace(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, mockEnvVars);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            throw new RuntimeException("Error starting tests..", e);
         }
         return env;
     }

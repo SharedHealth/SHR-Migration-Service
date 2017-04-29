@@ -18,3 +18,5 @@ target/
 #OSX specific files
 .DS_Store
 
+test_shrmigration*
+

@@ -75,7 +75,7 @@ public class ShrCatchmentEncounterFeedProcessor {
         @Override
         public void process(Event event) {
             logger.debug("Processing event with id %", event.getId());
-            String content = event.getContent();
+            String content = extractContent(event.getContent());
             encounterEventWorker.process(content, getSHREncounterId(event.getTitle()));
         }
 
@@ -89,4 +89,10 @@ public class ShrCatchmentEncounterFeedProcessor {
     private String getSHREncounterId(String eventTitle) {
         return StringUtils.substringAfter(eventTitle, "Encounter:");
     }
+
+    private static String extractContent(String content) {
+        return content.trim().replaceFirst(
+                "^<!\\[CDATA\\[", "").replaceFirst("\\]\\]>$", "");
+    }
+
 }

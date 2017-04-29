@@ -5,6 +5,7 @@ import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.sharedhealth.migrationservice.config.SHREnvironmentMock;
@@ -13,6 +14,7 @@ import org.sharedhealth.migrationservice.utils.TimeUuidUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cassandra.core.CqlOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -29,6 +31,8 @@ public class EncounterEventWorkerIT {
     @Autowired
     private EncounterEventWorker encounterEventWorker;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     @Autowired
     @Qualifier("SHRCassandraTemplate")
     private CqlOperations cqlOperations;
@@ -61,4 +65,19 @@ public class EncounterEventWorkerIT {
         assertEquals(encounterId, afterUpdateFirstRow.getString("encounter_id"));
         assertNotNull(afterUpdateFirstRow.getString("content_v3"));
     }
+
+
+    @After
+    public void tearDown() throws Exception {
+        jdbcTemplate.execute("delete from markers");
+        jdbcTemplate.execute("delete from failed_events");
+        jdbcTemplate.execute("delete from failed_event_retry_log");
+
+        cqlOperations.execute("truncate encounter");
+        cqlOperations.execute("truncate enc_by_catchment");
+        cqlOperations.execute("truncate enc_by_patient");
+        cqlOperations.execute("truncate enc_history");
+        cqlOperations.execute("truncate patient");
+    }
+
 }

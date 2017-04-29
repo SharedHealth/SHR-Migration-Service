@@ -7,7 +7,12 @@
             http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
     <!--Add change tags here-->
 
-    <changeSet id="creating table markers" context="setup" author="Anjaly, Sukreet">
+    <changeSet id="ict4h-atomfeed-client-1" context="setup" author="Anjaly, Sukreet">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="markers"/>
+            </not>
+        </preConditions>
         <createTable tableName="markers">
             <column name="feed_uri" type="varchar(255)">
                 <constraints nullable="false" primaryKey="true"/>
@@ -16,7 +21,12 @@
             <column name="feed_uri_for_last_read_entry" type="varchar(255)"/>
         </createTable>
     </changeSet>
-    <changeSet id="ict4h-atomfeed-client-2" context="setup" author="ict4h">
+    <changeSet id="ict4h-atomfeed-client-2" context="setup" author="Anjaly, Sukreet">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="failed_events"/>
+            </not>
+        </preConditions>
         <createTable tableName="failed_events">
             <column name="id" type="serial">
                 <constraints nullable="false" primaryKey="true"/>
@@ -27,7 +37,27 @@
             <column name="event_id" type="varchar(255)"/>
             <column name="event_content" type="varchar(4000)"/>
             <column name="error_hash_code" type="int"/>
-            <column name="title" type="varchar(255)"></column>
+            <column name="title" type="varchar(255)"/>
+            <column name="retries" type="int"/>
+            <column name="tags" type="varchar(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="ict4h-atomfeed-client-3" context="setup" author="Dubey, Preeti">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="failed_event_retry_log"/>
+            </not>
+        </preConditions>
+        <createTable tableName="failed_event_retry_log">
+            <column name="id" type="serial">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="feed_uri" type="varchar(255)"/>
+            <column name="failed_at" type="timestamp"/>
+            <column name="error_message" type="varchar(4000)"/>
+            <column name="event_id" type="varchar(255)"/>
+            <column name="event_content" type="varchar(4000)"/>
+            <column name="error_hash_code" type="int"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

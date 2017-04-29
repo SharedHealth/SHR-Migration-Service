@@ -10,11 +10,13 @@ import org.sharedhealth.migrationservice.feed.encounter.EncounterEventWorker;
 import org.sharedhealth.migrationservice.feed.encounter.ShrCatchmentEncounterFeedProcessor;
 import org.sharedhealth.migrationservice.feed.transaction.AtomFeedSpringTransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(value = "${ENABLE_SCHEDULING}")
 public class CatchmentEncounterCrawlerJob {
     private final DataSourceTransactionManager txMgr;
     private final SHRMigrationProperties properties;
