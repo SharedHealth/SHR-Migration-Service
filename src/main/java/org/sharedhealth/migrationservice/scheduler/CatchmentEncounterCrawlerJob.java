@@ -2,13 +2,13 @@ package org.sharedhealth.migrationservice.scheduler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.ict4h.atomfeed.client.repository.jdbc.AllFailedEventsJdbcImpl;
 import org.ict4h.atomfeed.client.repository.jdbc.AllMarkersJdbcImpl;
 import org.sharedhealth.migrationservice.client.ShrClient;
 import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
 import org.sharedhealth.migrationservice.feed.encounter.EncounterEventWorker;
 import org.sharedhealth.migrationservice.feed.encounter.ShrCatchmentEncounterFeedProcessor;
 import org.sharedhealth.migrationservice.feed.transaction.AtomFeedSpringTransactionManager;
+import org.sharedhealth.migrationservice.feed.transaction.SHRFailedEventsJdbcImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -42,11 +42,12 @@ public class CatchmentEncounterCrawlerJob {
                     new ShrCatchmentEncounterFeedProcessor(
                             encounterEventWorker, feedUrl,
                             new AllMarkersJdbcImpl(transactionManager),
-                            new AllFailedEventsJdbcImpl(transactionManager),
+                            new SHRFailedEventsJdbcImpl(transactionManager, properties),
                             transactionManager, shrWebClient, properties);
             try {
                 logger.info("Crawling feed:" + feedUrl);
                 feedCrawler.process();
+                feedCrawler.processFailedEvents();
             } catch (Exception e) {
                 String errorMessage = String.format("Unable to process encounter catchment feed [%s]", feedUrl);
                 logger.error(errorMessage, e);

@@ -14,8 +14,10 @@ public class SHRMigrationProperties {
 
     @Value("${SHR_SERVER_BASE_URL}")
     private String shrUrl;
-    @Value("${FHIR_DOCUMENT_SCHEMA_VERSION}")
-    private String fhirDocumentSchemaVersion;
+    @Value("${FHIR_DOCUMENT_NEW_SCHEMA_VERSION}")
+    private String fhirDocumentNewSchemaVersion;
+    @Value("${FHIR_DOCUMENT_OLD_SCHEMA_VERSION}")
+    private String fhirDocumentOldSchemaVersion;
 
     @Value("${IDP_SERVER_LOGIN_URL}")
     private String idpServerLoginUrl;
@@ -60,6 +62,8 @@ public class SHRMigrationProperties {
     private String catchmentList;
     @Value("${TR_VALUESET_URI}")
     private String trValuesetUri;
+    @Value("${FAILED_BUNDLE_STORAGE_DIR_PATH}")
+    private String failedBundleStorageDirPath;
 
     public String getCassandraUser() {
         return cassandraUser;
@@ -145,12 +149,20 @@ public class SHRMigrationProperties {
         return ensureSuffix(shrUrl, "/");
     }
 
+    public String getFhirDocumentNewSchemaVersion() {
+        return fhirDocumentNewSchemaVersion;
+    }
+
+    public String getFhirDocumentOldSchemaVersion() {
+        return fhirDocumentOldSchemaVersion;
+    }
+
+    public String getFailedBundleStorageDirPath() {
+        return failedBundleStorageDirPath;
+    }
+
     @Bean
     public static PropertySourcesPlaceholderConfigurer propertyPlaceholderConfigurer() {
         return new PropertySourcesPlaceholderConfigurer();
-    }
-
-    public String getFhirDocumentSchemaVersion() {
-        return fhirDocumentSchemaVersion;
     }
 }

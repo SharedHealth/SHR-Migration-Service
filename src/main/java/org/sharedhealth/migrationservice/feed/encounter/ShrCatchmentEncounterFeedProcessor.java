@@ -54,6 +54,16 @@ public class ShrCatchmentEncounterFeedProcessor {
         atomFeedClient.processEvents();
     }
 
+    public void processFailedEvents() throws URISyntaxException {
+        AtomFeedProperties atomProperties = new AtomFeedProperties();
+        atomProperties.setFailedEventMaxRetry(1);
+        AtomFeedClient atomFeedClient = atomFeedClient(new URI(this.feedUrl),
+                new FeedEventWorker(encounterEventWorker),
+                atomProperties);
+        logger.debug("Crawling feed:" + this.feedUrl);
+        atomFeedClient.processFailedEvents();
+    }
+
     private AtomFeedClient atomFeedClient(URI feedUri, EventWorker worker, AtomFeedProperties atomProperties) {
         return new AtomFeedClient(
                 new AllEncounterFeeds(shrWebClient),

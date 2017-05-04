@@ -19,7 +19,7 @@ public class Main {
     public static void main(String[] args) {
         logger.info("starting shr migration service ");
         AnnotationConfigApplicationContext springContext = new AnnotationConfigApplicationContext();
-        springContext.scan("org.sharedhealth.migrationService");
+        springContext.scan("org.sharedhealth.migrationservice");
         springContext.refresh();
     }
 }

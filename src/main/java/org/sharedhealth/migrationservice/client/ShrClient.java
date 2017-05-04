@@ -38,7 +38,7 @@ public class ShrClient {
             if (e.getErrorCode() == 401) {
                 logger.error("Unauthorized, clearing token.");
                 identityServiceClient.clearToken();
-            }else{
+            } else {
                 throw new RuntimeException(e);
             }
         }

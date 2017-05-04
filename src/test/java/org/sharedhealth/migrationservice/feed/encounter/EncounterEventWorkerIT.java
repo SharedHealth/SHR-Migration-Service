@@ -43,6 +43,7 @@ public class EncounterEventWorkerIT {
         Insert insert = QueryBuilder.insertInto("encounter")
                 .value("encounter_id", encounterId)
                 .value("received_at", TimeUuidUtil.uuidForDate(new Date()))
+                .value("content_version_v2", 1)
                 .value("content_v2", "ABCD");
 
         cqlOperations.execute(insert);
@@ -64,6 +65,7 @@ public class EncounterEventWorkerIT {
         Row afterUpdateFirstRow = afterUpdateAll.get(0);
         assertEquals(encounterId, afterUpdateFirstRow.getString("encounter_id"));
         assertNotNull(afterUpdateFirstRow.getString("content_v3"));
+        assertEquals(afterUpdateFirstRow.getInt("content_version_v2"), afterUpdateFirstRow.getInt("content_version_v3"));
     }
 
 

@@ -1,6 +1,5 @@
 package org.sharedhealth.migrationservice.persistent;
 
-import com.datastax.driver.core.Row;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.querybuilder.Update;
@@ -32,25 +31,35 @@ public class EncounterRepository {
 
     public void save(String stu3BundleContent, EncounterDetails encounterDetails) {
         Update.Where update = QueryBuilder.update(ENCOUNTER_TABLE_NAME)
-                .with(set(getContentColumnName(), stu3BundleContent))
+                .with(set(getNewContentColumnName(), stu3BundleContent))
+                .and(set(getNewContentVersionColumnName(), encounterDetails.getOldContentVersion()))
                 .where(eq(ENCOUNTER_ID_COLUMN_NAME, encounterDetails.getEncounterId()))
                 .and(eq(RECEIVED_AT_COLUMN_NAME, encounterDetails.getReceivedAt()));
 
         cqlOperations.execute(update);
     }
 
-    private String getContentColumnName() {
-        return "content_" + shrProperties.getFhirDocumentSchemaVersion();
+    private String getNewContentColumnName() {
+        return "content_" + shrProperties.getFhirDocumentNewSchemaVersion();
+    }
+
+    private String getNewContentVersionColumnName() {
+        return "content_version_" + shrProperties.getFhirDocumentNewSchemaVersion();
+    }
+
+    private String getOldContentVersionColumnName() {
+        return "content_version_" + shrProperties.getFhirDocumentOldSchemaVersion();
     }
 
     public EncounterDetails getByEncounterId(String encounterId) {
-        Select select = QueryBuilder.select(ENCOUNTER_ID_COLUMN_NAME, RECEIVED_AT_COLUMN_NAME)
+        String oldVersionColumnName = getOldContentVersionColumnName();
+        Select select = QueryBuilder.select(ENCOUNTER_ID_COLUMN_NAME, RECEIVED_AT_COLUMN_NAME, oldVersionColumnName)
                 .from(ENCOUNTER_TABLE_NAME)
                 .where(eq(ENCOUNTER_ID_COLUMN_NAME, encounterId))
                 .limit(1);
 
-        return cqlOperations.query(select, (Row row, int rowNum) ->
-                new EncounterDetails(row.getString(ENCOUNTER_ID_COLUMN_NAME), row.getUUID(RECEIVED_AT_COLUMN_NAME))
+        return cqlOperations.query(select, (row, rowNum) -> new EncounterDetails(row.getString(ENCOUNTER_ID_COLUMN_NAME),
+                row.getUUID(RECEIVED_AT_COLUMN_NAME), row.getInt(oldVersionColumnName))
         ).get(0);
     }
 }

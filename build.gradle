@@ -6,7 +6,7 @@ apply plugin: 'idea'
 apply plugin: 'checkstyle'
 apply plugin: 'pmd'
 
-def mainClassName = "org.sharedhealth.migrationService.launch.Main"
+def mainClassName = "org.sharedhealth.migrationservice.launch.Main"
 
 sourceCompatibility = 1.8
 
@@ -24,6 +24,9 @@ jar {
     }
     from {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    into('lib') {
+        from 'libs'
     }
 }
 

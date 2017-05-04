@@ -5,8 +5,8 @@ import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import org.apache.commons.io.FileUtils;
 import org.apache.http.HttpStatus;
-import org.ict4h.atomfeed.client.repository.jdbc.AllFailedEventsJdbcImpl;
 import org.ict4h.atomfeed.client.repository.jdbc.AllMarkersJdbcImpl;
 import org.junit.After;
 import org.junit.Before;
@@ -18,6 +18,7 @@ import org.sharedhealth.migrationservice.config.SHREnvironmentMock;
 import org.sharedhealth.migrationservice.config.SHRMigrationConfig;
 import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
 import org.sharedhealth.migrationservice.feed.transaction.AtomFeedSpringTransactionManager;
+import org.sharedhealth.migrationservice.feed.transaction.SHRFailedEventsJdbcImpl;
 import org.sharedhealth.migrationservice.utils.TimeUuidUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,6 +28,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.io.File;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +52,7 @@ public class ShrCatchmentEncounterFeedProcessorIT {
     private ShrClient shrWebClient;
     @Autowired
     private EncounterEventWorker encounterEventWorker;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
@@ -77,9 +80,12 @@ public class ShrCatchmentEncounterFeedProcessorIT {
                 )
         );
 
+        String bundleStorageDirPath = properties.getFailedBundleStorageDirPath();
+        new File(bundleStorageDirPath).mkdir();
+
         AtomFeedSpringTransactionManager transactionManager = new AtomFeedSpringTransactionManager(txMgr);
         feedProcessor = new ShrCatchmentEncounterFeedProcessor(encounterEventWorker, "http://localhost:9997/encounters",
-                new AllMarkersJdbcImpl(transactionManager), new AllFailedEventsJdbcImpl(transactionManager),
+                new AllMarkersJdbcImpl(transactionManager), new SHRFailedEventsJdbcImpl(transactionManager, properties),
                 transactionManager, shrWebClient, properties);
     }
 
@@ -117,15 +123,45 @@ public class ShrCatchmentEncounterFeedProcessorIT {
         feedProcessor.process();
         assertMarkers();
 
-        List<Map<String, String>> failedEvents = jdbcTemplate.query("select * from failed_events", (rs, rowNum) -> {
-            Map<String, String> map = new HashMap<>();
-            map.put("title", String.valueOf(rs.getString("title")));
-            return map;
-        });
+        List<Map<String, Object>> failedEvents = jdbcTemplate.queryForList("select * from failed_events");
 
         assertEquals(1, failedEvents.size());
-        Map<String, String> failedEvent = failedEvents.get(0);
+        Map<String, Object> failedEvent = failedEvents.get(0);
         assertEquals("Encounter:bc55a875-f163-4e79-aa53-9863f75b6ce3", failedEvent.get("title"));
+        String eventContent = (String) failedEvent.get("event_content");
+        assertTrue(eventContent.endsWith("/SHR-Migration-Service/failed-bundles/Encounter:bc55a875-f163-4e79-aa53-9863f75b6ce3"));
+    }
+
+    @Test
+    public void shouldRetryForFailedEvents() throws Exception {
+        feedProcessor.process();
+        assertMarkers();
+
+        Map<String, Object> failedEvent = jdbcTemplate.queryForMap("SELECT * FROM failed_events");
+        assertEquals(0, failedEvent.get("retries"));
+
+        feedProcessor.processFailedEvents();
+
+        failedEvent = jdbcTemplate.queryForMap("SELECT * FROM failed_events");
+        assertEquals(1, failedEvent.get("retries"));
+    }
+
+    @Test
+    public void shouldNotRetryForFailedEventIfAlreadyRetriedOnce() throws Exception {
+        feedProcessor.process();
+        assertMarkers();
+
+        Map<String, Object> failedEvent = jdbcTemplate.queryForMap("SELECT * FROM failed_events");
+        assertEquals(0, failedEvent.get("retries"));
+
+        feedProcessor.processFailedEvents();
+
+        failedEvent = jdbcTemplate.queryForMap("SELECT * FROM failed_events");
+        assertEquals(1, failedEvent.get("retries"));
+        feedProcessor.processFailedEvents();
+
+        failedEvent = jdbcTemplate.queryForMap("SELECT * FROM failed_events");
+        assertEquals(1, failedEvent.get("retries"));
     }
 
     private void assertMarkers() {
@@ -155,5 +191,10 @@ public class ShrCatchmentEncounterFeedProcessorIT {
         cqlOperations.execute("truncate enc_by_patient");
         cqlOperations.execute("truncate enc_history");
         cqlOperations.execute("truncate patient");
+
+        String bundleStorageDirPath = properties.getFailedBundleStorageDirPath();
+        File file = new File(bundleStorageDirPath);
+        FileUtils.cleanDirectory(file);
+        file.delete();
     }
 }

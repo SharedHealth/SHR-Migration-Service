@@ -6,8 +6,6 @@ import org.ict4h.atomfeed.transaction.AFTransactionWork;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
@@ -32,12 +30,7 @@ public class AtomFeedSpringTransactionManager implements AFTransactionManager, J
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         Integer txPropagationDef = getTxPropagation(action.getTxPropagationDefinition());
         transactionTemplate.setPropagationBehavior(txPropagationDef);
-        return transactionTemplate.execute(new TransactionCallback<T>() {
-            @Override
-            public T doInTransaction(TransactionStatus status) {
-                return action.execute();
-            }
-        });
+        return transactionTemplate.execute(status -> action.execute());
     }
 
     private Integer getTxPropagation(AFTransactionWork.PropagationDefinition propagationDefinition) {
