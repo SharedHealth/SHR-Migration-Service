@@ -1,17 +1,12 @@
 package org.sharedhealth.migrationservice.converter;
 
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.model.api.IDatatype;
-import ca.uhn.fhir.model.dstu2.composite.CodingDt;
-import ca.uhn.fhir.model.dstu2.composite.QuantityDt;
-import ca.uhn.fhir.model.dstu2.composite.ResourceReferenceDt;
-import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.IOUtils;
 import org.hl7.fhir.convertors.R2R3ConversionManager;
-import org.hl7.fhir.dstu2.model.MedicationAdministration;
 import org.hl7.fhir.dstu3.elementmodel.Manager;
+import org.hl7.fhir.dstu3.formats.XmlParser;
 import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.exceptions.FHIRFormatError;
 import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.Boolean.FALSE;
-import static org.sharedhealth.migrationservice.converter.DiagnosticOrderConverter.convertExistingDiagnosticOrders;
-import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getConceptCodingDt;
+import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getConceptCodingForDSTU2;
 import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getTrValuesetUrl;
-import static org.sharedhealth.migrationservice.converter.MedicationRequestConverter.convertExistingMedicationOrders;
-import static org.sharedhealth.migrationservice.converter.ProcedureRequestConverter.convertExistingProcedureRequests;
 import static org.sharedhealth.migrationservice.converter.XMLParser.removeExistingDiagnosticOrderFromBundleContent;
 
 @Component
@@ -51,17 +43,17 @@ public class AllResourceConverter {
     public final static String PROVENANCE_MEDICATION_REQUEST_DISPLAY = "Provenance Medication Request";
 
     public final static String PREVIOUS_PROCEDURE_ORDER_EXTN_URL = "https://sharedhealth.atlassian.net/wiki/display/docs/fhir-extensions#PreviousProcedureRequest";
-    private final IParser stu3Parser;
-    private final IParser dstu2Parser;
+    private XmlParser stu3Parser;
+    private org.hl7.fhir.dstu2.formats.XmlParser dstu2Parser;
     private R2R3ConversionManager r2R3ConversionManager;
     private SHRMigrationProperties shrMigrationProperties;
 
-    private Map<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderMap;
-    private Map<String, ca.uhn.fhir.model.dstu2.resource.ProcedureRequest> procedureRequestMap;
-    private Map<String, ca.uhn.fhir.model.dstu2.resource.MedicationOrder> medicationOrderMap;
+//    private Map<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderMap;
+    private Map<String, org.hl7.fhir.dstu2.model.ProcedureRequest> procedureRequestMap;
+//    private Map<String, ca.uhn.fhir.model.dstu2.resource.MedicationOrder> medicationOrderMap;
 
-    private Map<String, ResourceReferenceDt> diagnosticReportPerformerMap;
-    private Map<String, ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory> familyMemberHistoryMap;
+    private Map<String, org.hl7.fhir.dstu2.model.Reference> diagnosticReportPerformerMap;
+    private Map<String, org.hl7.fhir.dstu2.model.FamilyMemberHistory> familyMemberHistoryMap;
     private Map<String, Boolean> immunizationReportedMap;
 
     @Autowired
@@ -70,15 +62,16 @@ public class AllResourceConverter {
         r2R3ConversionManager.setR2Definitions(this.getClass().getResourceAsStream("/fhir-definitions/validation-min.xml.zip"));
         r2R3ConversionManager.setR3Definitions(this.getClass().getResourceAsStream("/fhir-definitions/definitions.xml.zip"));
         r2R3ConversionManager.setMappingLibrary(this.getClass().getResourceAsStream("/fhir-definitions/r2r3maps.zip"));
-        stu3Parser = FhirContext.forDstu3().newXmlParser();
-        dstu2Parser = FhirContext.forDstu2().newXmlParser();
         shrMigrationProperties = migrationProperties;
+
+        dstu2Parser = new org.hl7.fhir.dstu2.formats.XmlParser();
+        stu3Parser = new org.hl7.fhir.dstu3.formats.XmlParser();
     }
 
     public String convertBundleToStu3(String dstu2BundleContent, String encounterId) {
-        diagnosticOrderMap = new HashMap<>();
+//        diagnosticOrderMap = new HashMap<>();
         procedureRequestMap = new HashMap<>();
-        medicationOrderMap = new HashMap<>();
+//        medicationOrderMap = new HashMap<>();
         diagnosticReportPerformerMap = new HashMap<>();
         familyMemberHistoryMap = new HashMap<>();
         immunizationReportedMap = new HashMap<>();
@@ -88,9 +81,10 @@ public class AllResourceConverter {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             InputStream inputStream = IOUtils.toInputStream(dstu2BundleContent, "UTF-8");
             r2R3ConversionManager.convert(inputStream, outputStream, true, Manager.FhirFormat.XML);
-            Bundle bundle = stu3Parser.parseResource(Bundle.class, outputStream.toString());
+            Bundle bundle = (Bundle) new XmlParser().parse(outputStream.toString());
             makeNecessaryChangesToBundleAfterConversion(bundle);
-            return stu3Parser.encodeResourceToString(bundle);
+
+            return stu3Parser.composeString(bundle);
         } catch (Exception e) {
             String message = String.format("Failed while converting bundle with encounter-id %s ", encounterId);
             logger.error(message, e);
@@ -98,49 +92,49 @@ public class AllResourceConverter {
         }
     }
 
-    private String makeChangesToExistingContent(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException, TransformerException {
-        ca.uhn.fhir.model.dstu2.resource.Bundle existingBundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, dstu2BundleContent);
-        for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : existingBundle.getEntry()) {
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) {
-                diagnosticOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) entry.getResource());
+    private String makeChangesToExistingContent(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException, TransformerException, FHIRFormatError, org.xml.sax.SAXException {
+        org.hl7.fhir.dstu2.model.Bundle existingBundle = (org.hl7.fhir.dstu2.model.Bundle) dstu2Parser.parse(dstu2BundleContent);
+        for (org.hl7.fhir.dstu2.model.Bundle.BundleEntryComponent entry : existingBundle.getEntry()) {
+//            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.DiagnosticOrder) {
+//                diagnosticOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) entry.getResource());
+//            }
+//            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) {
+//                procedureRequestMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) entry.getResource());
+//            }
+//            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.MedicationOrder) {
+//                medicationOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.MedicationOrder) entry.getResource());
+//            }
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.FamilyMemberHistory) {
+                familyMemberHistoryMap.put(entry.getFullUrl(), (org.hl7.fhir.dstu2.model.FamilyMemberHistory) entry.getResource());
             }
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) {
-                procedureRequestMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) entry.getResource());
-            }
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.MedicationOrder) {
-                medicationOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.MedicationOrder) entry.getResource());
-            }
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory) {
-                familyMemberHistoryMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory) entry.getResource());
-            }
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.DiagnosticReport) {
-                ca.uhn.fhir.model.dstu2.resource.DiagnosticReport diagnosticReport = (ca.uhn.fhir.model.dstu2.resource.DiagnosticReport) entry.getResource();
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.DiagnosticReport) {
+                org.hl7.fhir.dstu2.model.DiagnosticReport diagnosticReport = (org.hl7.fhir.dstu2.model.DiagnosticReport) entry.getResource();
                 diagnosticReportPerformerMap.put(entry.getFullUrl(), diagnosticReport.getPerformer());
             }
-            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.Immunization) {
-                ca.uhn.fhir.model.dstu2.resource.Immunization immunization = (ca.uhn.fhir.model.dstu2.resource.Immunization) entry.getResource();
-                immunizationReportedMap.put(entry.getFullUrl(), immunization.getReported());
-            }
+//            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.Immunization) {
+//                org.hl7.fhir.dstu2.model.Immunization immunization = (org.hl7.fhir.dstu2.model.Immunization) entry.getResource();
+//                immunizationReportedMap.put(entry.getFullUrl(), immunization.getReported());
+//            }
         }
 
         String content = removeExistingDiagnosticOrderFromBundleContent(dstu2BundleContent);
-        ca.uhn.fhir.model.dstu2.resource.Bundle dstu2Bundle = dstu2Parser.parseResource(ca.uhn.fhir.model.dstu2.resource.Bundle.class, content);
+        org.hl7.fhir.dstu2.model.Bundle dstu2Bundle = (org.hl7.fhir.dstu2.model.Bundle) dstu2Parser.parse(content);
 
-        for (ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry : dstu2Bundle.getEntry()) {
-            changeInvalidImmunizationStatus(entry);
+        for (org.hl7.fhir.dstu2.model.Bundle.BundleEntryComponent bundleEntryComponent : dstu2Bundle.getEntry()) {
+            changeInvalidImmunizationStatus(bundleEntryComponent);
         }
 
-        return dstu2Parser.encodeResourceToString(dstu2Bundle);
+        return dstu2Parser.composeString(dstu2Bundle);
     }
 
-    private void changeInvalidImmunizationStatus(ca.uhn.fhir.model.dstu2.resource.Bundle.Entry entry) {
-        if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.Immunization) {
-            ca.uhn.fhir.model.dstu2.resource.Immunization immunization = (ca.uhn.fhir.model.dstu2.resource.Immunization) entry.getResource();
+    private void changeInvalidImmunizationStatus(org.hl7.fhir.dstu2.model.Bundle.BundleEntryComponent entry) {
+        if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.Immunization) {
+            org.hl7.fhir.dstu2.model.Immunization immunization = (org.hl7.fhir.dstu2.model.Immunization) entry.getResource();
             if ("completed".equals(immunization.getStatus()) || "in-progress".equals(immunization.getStatus())) {
-                immunization.setStatus(MedicationAdministration.MedicationAdministrationStatus.COMPLETED.toCode());
+                immunization.setStatus("completed");
             }
             if ("aborted".equals(immunization.getStatus()) || "entered-in-error".equals(immunization.getStatus())) {
-                immunization.setStatus(MedicationAdministration.MedicationAdministrationStatus.ENTEREDINERROR.toCode());
+                immunization.setStatus("entered-in-error");
             }
         }
     }
@@ -160,7 +154,7 @@ public class AllResourceConverter {
             if (entry.getResource() instanceof DiagnosticReport) {
                 DiagnosticReport diagnosticReport = (DiagnosticReport) entry.getResource();
                 DiagnosticReport.DiagnosticReportPerformerComponent performerComponent = diagnosticReport.addPerformer();
-                String performerRef = diagnosticReportPerformerMap.get(entry.getFullUrl()).getReference().getValue();
+                String performerRef = diagnosticReportPerformerMap.get(entry.getFullUrl()).getReference();
                 performerComponent.setActor(new Reference(performerRef));
             }
             if (entry.getResource() instanceof Immunization) {
@@ -173,9 +167,9 @@ public class AllResourceConverter {
             addOnsetToFamilyMemberCondition(entry);
         }
 
-        convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
-        convertExistingProcedureRequests(procedureRequestMap, bundle, composition, shrMigrationProperties);
-        convertExistingMedicationOrders(medicationOrderMap, bundle, composition);
+//        convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
+//        convertExistingProcedureRequests(procedureRequestMap, bundle, composition, shrMigrationProperties);
+//        convertExistingMedicationOrders(medicationOrderMap, bundle, composition);
     }
 
     private void makeChangesForCondition(Bundle.BundleEntryComponent entry) {
@@ -193,37 +187,43 @@ public class AllResourceConverter {
 
     private void addOnsetToFamilyMemberCondition(Bundle.BundleEntryComponent entry) {
         if (entry.getResource() instanceof FamilyMemberHistory) {
-            ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory existingFamilyMemberHistory = familyMemberHistoryMap.get(entry.getFullUrl());
+            org.hl7.fhir.dstu2.model.FamilyMemberHistory existingFamilyMemberHistory = familyMemberHistoryMap.get(entry.getFullUrl());
             if (null == existingFamilyMemberHistory) return;
             FamilyMemberHistory familyMemberHistory = (FamilyMemberHistory) entry.getResource();
-            for (ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory.Condition existingCondition : existingFamilyMemberHistory.getCondition()) {
+            for (org.hl7.fhir.dstu2.model.FamilyMemberHistory.FamilyMemberHistoryConditionComponent existingCondition : existingFamilyMemberHistory.getCondition()) {
                 FamilyMemberHistory.FamilyMemberHistoryConditionComponent condition = getMatchingCondition(familyMemberHistory, existingCondition);
-                IDatatype onset = existingCondition.getOnset();
-                if (null == onset || onset.isEmpty() || !(onset instanceof QuantityDt)) continue;
-                QuantityDt onsetQuantity = (QuantityDt) onset;
+                org.hl7.fhir.dstu2.model.Type onset = existingCondition.getOnset();
+                if (null == onset || onset.isEmpty() || !(onset instanceof org.hl7.fhir.dstu2.model.Quantity)) continue;
+                org.hl7.fhir.dstu2.model.Quantity onsetQuantity = (org.hl7.fhir.dstu2.model.Quantity) onset;
                 Age age = new Age();
                 age.setCode(onsetQuantity.getUnit());
                 age.setUnit(onsetQuantity.getUnit());
                 age.setSystem(onsetQuantity.getSystem());
                 age.setValue(onsetQuantity.getValue());
                 condition.setOnset(age);
+
             }
         }
     }
 
-    private FamilyMemberHistory.FamilyMemberHistoryConditionComponent getMatchingCondition(FamilyMemberHistory familyMemberHistory, ca.uhn.fhir.model.dstu2.resource.FamilyMemberHistory.Condition existingCondition) {
+    private FamilyMemberHistory.FamilyMemberHistoryConditionComponent getMatchingCondition(FamilyMemberHistory familyMemberHistory,
+                                                                                           org.hl7.fhir.dstu2.model.FamilyMemberHistory.FamilyMemberHistoryConditionComponent existingCondition) {
         for (FamilyMemberHistory.FamilyMemberHistoryConditionComponent newCondition : familyMemberHistory.getCondition()) {
-            CodingDt existingConceptCoding = getConceptCodingDt(existingCondition.getCode().getCoding());
-            Coding newConceptCoding = FhirBundleUtil.getConceptCoding(newCondition.getCode().getCoding());
+            org.hl7.fhir.dstu2.model.Coding existingConceptCoding = getConceptCodingForDSTU2(existingCondition.getCode().getCoding());
+            Coding newConceptCoding = FhirBundleUtil.getConceptCodingForSTU3(newCondition.getCode().getCoding());
+
             if (null == existingConceptCoding && null == newConceptCoding) {
-                CodingDt existingCoding = existingCondition.getCode().getCodingFirstRep();
+                /*if it is not a TR concept just check the display*/
+                org.hl7.fhir.dstu2.model.Coding existingCoding = existingCondition.getCode().getCoding().get(0);
                 Coding newCoding = newCondition.getCode().getCodingFirstRep();
                 if (!existingCoding.isEmpty() && !newCoding.isEmpty() && existingCoding.getDisplay().equals(newCoding.getDisplay())) {
                     return newCondition;
                 }
             }
+            /*if one one concept is from TR and another is local */
             boolean existingTRConceptOnly = null != existingConceptCoding && null == newConceptCoding;
             boolean newTRConceptOnly = null == existingConceptCoding && null != newConceptCoding;
+            /*if one one concept is from TR and another is local */
             if (existingTRConceptOnly || newTRConceptOnly) continue;
             if (newConceptCoding.getCode().equals(existingConceptCoding.getCode()) && newConceptCoding.getSystem().equals(existingConceptCoding.getSystem())) {
                 return newCondition;

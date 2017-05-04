@@ -1,8 +1,7 @@
 package org.sharedhealth.migrationservice.converter;
 
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.parser.IParser;
 import org.apache.commons.io.FileUtils;
+import org.hl7.fhir.dstu3.formats.XmlParser;
 import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.dstu3.model.MedicationRequest.MedicationRequestStatus;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -33,11 +32,10 @@ public class AllResourceConverterTest {
     private final String trSystem = "http://tr.com";
     private final String trCode = "answerCode";
     private final String trDisplay = "answerDisplay";
+
     private static AllResourceConverter allResourceConverter;
-
     private static SHRMigrationProperties shrMigrationProperties;
-
-    private IParser xmlParser = FhirContext.forDstu3().newXmlParser();
+    private static XmlParser xmlParser = new XmlParser();
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -51,8 +49,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_encounter.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -82,8 +80,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_complaint.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -115,8 +113,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_diagnosis.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -150,8 +148,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_diagnostic_report.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -197,8 +195,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_family_member_history.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -233,8 +231,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_immunization.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -283,8 +281,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_observations.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -316,8 +314,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_fullfilment.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -356,7 +354,7 @@ public class AllResourceConverterTest {
         URL requestedProcedure = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request_new.xml");
         String requestedProcedureContent = FileUtils.readFileToString(new File(requestedProcedure.getFile()), "UTF-8");
 
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(requestedProcedureContent,"enc-id"));
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(allResourceConverter.convertBundleToStu3(requestedProcedureContent, "enc-id"));
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -387,7 +385,7 @@ public class AllResourceConverterTest {
         URL cancelledProcedure = this.getClass().getResource("/bundles/dstu2/bundle_with_procedure_request_cancelled.xml");
         String cancelledProcedureContent = FileUtils.readFileToString(new File(cancelledProcedure.getFile()), "UTF-8");
 
-        Bundle newBundle = (Bundle) xmlParser.parseResource(allResourceConverter.convertBundleToStu3(cancelledProcedureContent,"enc-id"));
+        Bundle newBundle = (Bundle) xmlParser.parse(allResourceConverter.convertBundleToStu3(cancelledProcedureContent, "enc-id"));
 
         Bundle.BundleEntryComponent newCompositionEntry = getFirstEntryOfType(newBundle, ResourceType.Composition);
         Composition newComposition = (Composition) newCompositionEntry.getResource();
@@ -414,8 +412,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_medication_orders.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -477,8 +475,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_diagnostic_order.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
@@ -522,8 +520,8 @@ public class AllResourceConverterTest {
         URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_cancelled_diagnostic_order.xml");
         String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
 
-        String s = allResourceConverter.convertBundleToStu3(content,"enc-id");
-        Bundle stu3Bundle = (Bundle) xmlParser.parseResource(s);
+        String s = allResourceConverter.convertBundleToStu3(content, "enc-id");
+        Bundle stu3Bundle = (Bundle) xmlParser.parse(s);
 
         Bundle.BundleEntryComponent compositionEntry = getFirstEntryOfType(stu3Bundle, ResourceType.Composition);
         Composition composition = (Composition) compositionEntry.getResource();
