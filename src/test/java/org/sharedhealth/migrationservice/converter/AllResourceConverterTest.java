@@ -245,7 +245,7 @@ public class AllResourceConverterTest {
         assertEquals("http://www.mci.com/patients/98104750156", immunization.getPatient().getReference());
         assertEquals("urn:uuid:de711fc8-3b1b-4089-813e-1ae8b3936ea8", immunization.getEncounter().getReference());
 
-        assertTrue(immunization.getPrimarySource());
+        assertFalse(immunization.getPrimarySource());
         assertEquals(Immunization.ImmunizationStatus.COMPLETED, immunization.getStatus());
         assertNotNull(immunization.getDate());
 
@@ -552,7 +552,7 @@ public class AllResourceConverterTest {
         assertEquals(trSystem, route.getSystem());
         assertEquals("_OralRoute", route.getCode());
 
-        SimpleQuantity doseQuantity = dosageInstruction.getDoseSimpleQuantity();
+        Quantity doseQuantity = (Quantity)dosageInstruction.getDose();
         assertEquals(trSystem, doseQuantity.getSystem());
         assertEquals("385055001", doseQuantity.getCode());
         assertEquals("Tablet dose form", doseQuantity.getUnit());
@@ -592,7 +592,7 @@ public class AllResourceConverterTest {
         assertEquals(trSystem, route.getSystem());
         assertEquals("_OralRoute", route.getCode());
 
-        SimpleQuantity doseQuantity = dosageInstruction.getDoseSimpleQuantity();
+        Quantity doseQuantity = (Quantity)dosageInstruction.getDose();
         assertEquals(trSystem, doseQuantity.getSystem());
         assertEquals("415703001", doseQuantity.getCode());
         assertEquals("Teaspoonful - unit of product", doseQuantity.getUnit());

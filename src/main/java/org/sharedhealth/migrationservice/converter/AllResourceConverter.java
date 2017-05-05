@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
@@ -23,8 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.Boolean.FALSE;
+import static org.sharedhealth.migrationservice.converter.DiagnosticOrderConverter.convertExistingDiagnosticOrders;
 import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getConceptCodingForDSTU2;
 import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getTrValuesetUrl;
+import static org.sharedhealth.migrationservice.converter.MedicationRequestConverter.convertExistingMedicationOrders;
+import static org.sharedhealth.migrationservice.converter.ProcedureRequestConverter.convertExistingProcedureRequests;
 import static org.sharedhealth.migrationservice.converter.XMLParser.removeExistingDiagnosticOrderFromBundleContent;
 
 @Component
@@ -48,9 +50,9 @@ public class AllResourceConverter {
     private R2R3ConversionManager r2R3ConversionManager;
     private SHRMigrationProperties shrMigrationProperties;
 
-//    private Map<String, ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder> diagnosticOrderMap;
+    private Map<String, org.hl7.fhir.dstu2.model.DiagnosticOrder> diagnosticOrderMap;
     private Map<String, org.hl7.fhir.dstu2.model.ProcedureRequest> procedureRequestMap;
-//    private Map<String, ca.uhn.fhir.model.dstu2.resource.MedicationOrder> medicationOrderMap;
+    private Map<String, org.hl7.fhir.dstu2.model.MedicationOrder> medicationOrderMap;
 
     private Map<String, org.hl7.fhir.dstu2.model.Reference> diagnosticReportPerformerMap;
     private Map<String, org.hl7.fhir.dstu2.model.FamilyMemberHistory> familyMemberHistoryMap;
@@ -69,9 +71,9 @@ public class AllResourceConverter {
     }
 
     public String convertBundleToStu3(String dstu2BundleContent, String encounterId) {
-//        diagnosticOrderMap = new HashMap<>();
+        diagnosticOrderMap = new HashMap<>();
         procedureRequestMap = new HashMap<>();
-//        medicationOrderMap = new HashMap<>();
+        medicationOrderMap = new HashMap<>();
         diagnosticReportPerformerMap = new HashMap<>();
         familyMemberHistoryMap = new HashMap<>();
         immunizationReportedMap = new HashMap<>();
@@ -92,18 +94,18 @@ public class AllResourceConverter {
         }
     }
 
-    private String makeChangesToExistingContent(String dstu2BundleContent) throws IOException, ParserConfigurationException, SAXException, TransformerException, FHIRFormatError, org.xml.sax.SAXException {
+    private String makeChangesToExistingContent(String dstu2BundleContent) throws IOException, ParserConfigurationException, TransformerException, FHIRFormatError, org.xml.sax.SAXException {
         org.hl7.fhir.dstu2.model.Bundle existingBundle = (org.hl7.fhir.dstu2.model.Bundle) dstu2Parser.parse(dstu2BundleContent);
         for (org.hl7.fhir.dstu2.model.Bundle.BundleEntryComponent entry : existingBundle.getEntry()) {
-//            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.DiagnosticOrder) {
-//                diagnosticOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.DiagnosticOrder) entry.getResource());
-//            }
-//            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) {
-//                procedureRequestMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.ProcedureRequest) entry.getResource());
-//            }
-//            if (entry.getResource() instanceof ca.uhn.fhir.model.dstu2.resource.MedicationOrder) {
-//                medicationOrderMap.put(entry.getFullUrl(), (ca.uhn.fhir.model.dstu2.resource.MedicationOrder) entry.getResource());
-//            }
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.DiagnosticOrder) {
+                diagnosticOrderMap.put(entry.getFullUrl(), (org.hl7.fhir.dstu2.model.DiagnosticOrder) entry.getResource());
+            }
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.ProcedureRequest) {
+                procedureRequestMap.put(entry.getFullUrl(), (org.hl7.fhir.dstu2.model.ProcedureRequest) entry.getResource());
+            }
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.MedicationOrder) {
+                medicationOrderMap.put(entry.getFullUrl(), (org.hl7.fhir.dstu2.model.MedicationOrder) entry.getResource());
+            }
             if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.FamilyMemberHistory) {
                 familyMemberHistoryMap.put(entry.getFullUrl(), (org.hl7.fhir.dstu2.model.FamilyMemberHistory) entry.getResource());
             }
@@ -111,10 +113,10 @@ public class AllResourceConverter {
                 org.hl7.fhir.dstu2.model.DiagnosticReport diagnosticReport = (org.hl7.fhir.dstu2.model.DiagnosticReport) entry.getResource();
                 diagnosticReportPerformerMap.put(entry.getFullUrl(), diagnosticReport.getPerformer());
             }
-//            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.Immunization) {
-//                org.hl7.fhir.dstu2.model.Immunization immunization = (org.hl7.fhir.dstu2.model.Immunization) entry.getResource();
-//                immunizationReportedMap.put(entry.getFullUrl(), immunization.getReported());
-//            }
+            if (entry.getResource() instanceof org.hl7.fhir.dstu2.model.Immunization) {
+                org.hl7.fhir.dstu2.model.Immunization immunization = (org.hl7.fhir.dstu2.model.Immunization) entry.getResource();
+                immunizationReportedMap.put(entry.getFullUrl(), immunization.getReported());
+            }
         }
 
         String content = removeExistingDiagnosticOrderFromBundleContent(dstu2BundleContent);
@@ -167,9 +169,9 @@ public class AllResourceConverter {
             addOnsetToFamilyMemberCondition(entry);
         }
 
-//        convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
-//        convertExistingProcedureRequests(procedureRequestMap, bundle, composition, shrMigrationProperties);
-//        convertExistingMedicationOrders(medicationOrderMap, bundle, composition);
+        convertExistingDiagnosticOrders(diagnosticOrderMap, bundle, composition, shrMigrationProperties);
+        convertExistingProcedureRequests(procedureRequestMap, bundle, composition, shrMigrationProperties);
+        convertExistingMedicationOrders(medicationOrderMap, bundle, composition);
     }
 
     private void makeChangesForCondition(Bundle.BundleEntryComponent entry) {

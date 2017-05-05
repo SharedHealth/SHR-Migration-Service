@@ -86,6 +86,10 @@ public class ShrCatchmentEncounterFeedProcessor {
         public void process(Event event) {
             logger.debug("Processing event with id %", event.getId());
             String content = extractContent(event.getContent());
+            if (StringUtils.isBlank(content)){
+                logger.debug("The event with title %s doesn't have any content, skipping", event.getTitle());
+                return;
+            }
             encounterEventWorker.process(content, getSHREncounterId(event.getTitle()));
         }
 
