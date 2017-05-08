@@ -24,7 +24,6 @@ public class ShrCatchmentEncounterFeedProcessor {
     private AllFailedEvents failedEvents;
     private AtomFeedSpringTransactionManager transactionManager;
     private ShrClient shrWebClient;
-    private SHRMigrationProperties properties;
 
     private Logger logger = LogManager.getLogger(ShrCatchmentEncounterFeedProcessor.class);
 
@@ -42,7 +41,6 @@ public class ShrCatchmentEncounterFeedProcessor {
         this.failedEvents = failedEvents;
         this.transactionManager = transactionManager;
         this.shrWebClient = shrWebClient;
-        this.properties = properties;
     }
 
     public void process() throws URISyntaxException {
@@ -50,7 +48,6 @@ public class ShrCatchmentEncounterFeedProcessor {
         AtomFeedClient atomFeedClient = atomFeedClient(new URI(this.feedUrl),
                 new FeedEventWorker(encounterEventWorker),
                 atomProperties);
-        logger.debug("Crawling feed:" + this.feedUrl);
         atomFeedClient.processEvents();
     }
 
@@ -60,7 +57,6 @@ public class ShrCatchmentEncounterFeedProcessor {
         AtomFeedClient atomFeedClient = atomFeedClient(new URI(this.feedUrl),
                 new FeedEventWorker(encounterEventWorker),
                 atomProperties);
-        logger.debug("Crawling feed:" + this.feedUrl);
         atomFeedClient.processFailedEvents();
     }
 
@@ -84,10 +80,10 @@ public class ShrCatchmentEncounterFeedProcessor {
 
         @Override
         public void process(Event event) {
-            logger.debug("Processing event with id %", event.getId());
+            logger.debug(String.format("Processing event with id %s", event.getId()));
             String content = extractContent(event.getContent());
             if (StringUtils.isBlank(content)){
-                logger.debug("The event with title %s doesn't have any content, skipping", event.getTitle());
+                logger.info(String.format("The event with title %s doesn't have any content, skipping", event.getTitle()));
                 return;
             }
             encounterEventWorker.process(content, getSHREncounterId(event.getTitle()));

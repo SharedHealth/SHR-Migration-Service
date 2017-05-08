@@ -1,6 +1,7 @@
 package org.sharedhealth.migrationservice.converter;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
 import org.hl7.fhir.convertors.R2R3ConversionManager;
 import org.hl7.fhir.dstu3.elementmodel.Manager;
 import org.hl7.fhir.dstu3.formats.XmlParser;
@@ -8,8 +9,7 @@ import org.hl7.fhir.dstu3.model.*;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.exceptions.FHIRFormatError;
 import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.sharedhealth.migrationservice.feed.encounter.ShrCatchmentEncounterFeedProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +31,7 @@ import static org.sharedhealth.migrationservice.converter.XMLParser.removeExisti
 
 @Component
 public class AllResourceConverter {
-    private static final Logger logger = LoggerFactory.getLogger(AllResourceConverter.class);
+    private org.apache.logging.log4j.Logger logger = LogManager.getLogger(ShrCatchmentEncounterFeedProcessor.class);
 
     public final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROCEDURE";
     public final static String TR_VALUESET_ORDER_TYPE_NAME = "order-type";

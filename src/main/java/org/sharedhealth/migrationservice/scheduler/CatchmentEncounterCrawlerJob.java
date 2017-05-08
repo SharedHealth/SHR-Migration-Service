@@ -42,7 +42,7 @@ public class CatchmentEncounterCrawlerJob {
                             new SHRFailedEventsJdbcImpl(transactionManager, properties),
                             transactionManager, shrWebClient, properties);
             try {
-                logger.info("Crawling feed:" + feedUrl);
+                logger.debug("Crawling feed:" + feedUrl);
                 feedCrawler.process();
                 feedCrawler.processFailedEvents();
             } catch (Exception e) {
