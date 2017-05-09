@@ -1,5 +1,6 @@
 package org.sharedhealth.migrationservice.feed.encounter;
 
+import com.sun.syndication.feed.atom.Category;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,6 +16,7 @@ import org.sharedhealth.migrationservice.feed.transaction.AtomFeedSpringTransact
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 public class ShrCatchmentEncounterFeedProcessor {
 
@@ -81,8 +83,12 @@ public class ShrCatchmentEncounterFeedProcessor {
         @Override
         public void process(Event event) {
             logger.debug(String.format("Processing event with id %s", event.getId()));
+            if (hasUpdatedEventInFeed(event)) {
+                logger.info(String.format("The event with id %s has been updated later, skipping", event.getId()));
+                return;
+            }
             String content = extractContent(event.getContent());
-            if (StringUtils.isBlank(content)){
+            if (StringUtils.isBlank(content)) {
                 logger.info(String.format("The event with title %s doesn't have any content, skipping", event.getTitle()));
                 return;
             }
@@ -104,5 +110,18 @@ public class ShrCatchmentEncounterFeedProcessor {
         return content.trim().replaceFirst(
                 "^<!\\[CDATA\\[", "").replaceFirst("\\]\\]>$", "");
     }
+
+    private boolean hasUpdatedEventInFeed(Event event) {
+        String latestUpdateEventId = "latest_update_event_id";
+        List allCategories = event.getCategories();
+        if (allCategories != null) {
+            for (Object category : allCategories) {
+                if (((Category) category).getTerm().startsWith(latestUpdateEventId))
+                    return true;
+            }
+        }
+        return false;
+    }
+
 
 }

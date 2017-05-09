@@ -3,6 +3,7 @@ package org.sharedhealth.migrationservice.feed.transaction;
 import org.apache.commons.io.FileUtils;
 import org.ict4h.atomfeed.client.domain.Event;
 import org.ict4h.atomfeed.client.domain.FailedEvent;
+import org.ict4h.atomfeed.client.domain.FailedEventRetryLog;
 import org.ict4h.atomfeed.client.repository.jdbc.AllFailedEventsJdbcImpl;
 import org.ict4h.atomfeed.jdbc.JdbcConnectionProvider;
 import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
@@ -49,6 +50,15 @@ public class SHRFailedEventsJdbcImpl extends AllFailedEventsJdbcImpl {
         FailedEvent newFailedEvent = new FailedEvent(failedEvent.getFeedUri(), newEvent,
                 failedEvent.getErrorMessage(), failedEvent.getFailedAt(), failedEvent.getRetries());
         super.addOrUpdate(newFailedEvent);
+    }
+
+    @Override
+    public void insert(FailedEventRetryLog failedEventRetryLog) {
+        String failedEventContent = "Content are stored in a file. " +
+                "File location is given in corresponding failed event";
+        FailedEventRetryLog newFailedEventRetryLog = new FailedEventRetryLog(failedEventRetryLog.getFeedUri(),
+                failedEventRetryLog.getFailedAt(), failedEventRetryLog.getErrorMessage(), failedEventRetryLog.getEventId(), failedEventContent);
+        super.insert(newFailedEventRetryLog);
     }
 
     @Override

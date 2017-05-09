@@ -14,9 +14,7 @@ import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.A
 import static org.hl7.fhir.dstu3.model.ProcedureRequest.ProcedureRequestStatus.CANCELLED;
 import static org.sharedhealth.migrationservice.converter.AllResourceConverter.PROCEDURE_REQUEST_RESOURCE_DISPLAY;
 import static org.sharedhealth.migrationservice.converter.AllResourceConverter.TR_VALUESET_ORDER_TYPE_NAME;
-import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.convertCode;
-import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getConceptCodingForDSTU2;
-import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.getExtensionByUrl;
+import static org.sharedhealth.migrationservice.converter.FhirBundleUtil.*;
 
 public class DiagnosticOrderConverter {
     private static final String DIAGNOSTIC_ORDER_R2_EXTENSION = "http://hl7.org/fhir/diagnosticorder-r2-marker";
@@ -65,7 +63,10 @@ public class DiagnosticOrderConverter {
                 coding.setSystem(String.format("%s%s", migrationProperties.getTrValuesetUri(), TR_VALUESET_ORDER_TYPE_NAME));
                 coding.setCode(orderCategoryCode);
 
-                procedureRequest.setAuthoredOn(item.getEvent().get(0).getDateTime());
+                List<DiagnosticOrder.DiagnosticOrderEventComponent> events = item.getEvent();
+                if (!events.isEmpty()) {
+                    procedureRequest.setAuthoredOn(events.get(0).getDateTime());
+                }
                 procedureRequest.setStatus(status);
                 procedureRequest.setIntent(ORDER);
                 procedureRequest.setCode(convertCode(item.getCode()));

@@ -14,7 +14,6 @@
         <link rel="via" type="application/xml" href="/patients/98001098063/encounters/bc55a875-f163-4e79-aa53-9863f75b6ce3" />
         <category term="encounter" />
         <category term="encounter_updated_at:2017-03-14T12:10:03.088+0530" />
-        <category term="latest_update_event_id:0da61100-0881-11e7-9fea-667d3bb0eee2" />
         <id>df41ae40-087c-11e7-9fea-667d3bb0eee2</id>
         <updated>2017-03-14T06:10:07Z</updated>
         <content type="application/vnd.atomfeed+xml">
