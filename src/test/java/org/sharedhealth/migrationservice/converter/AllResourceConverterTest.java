@@ -1,5 +1,6 @@
 package org.sharedhealth.migrationservice.converter;
 
+import ca.uhn.fhir.util.DateUtils;
 import org.apache.commons.io.FileUtils;
 import org.hl7.fhir.dstu3.formats.XmlParser;
 import org.hl7.fhir.dstu3.model.*;
@@ -11,7 +12,7 @@ import org.sharedhealth.migrationservice.config.SHRMigrationProperties;
 
 import java.io.File;
 import java.net.URL;
-import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -461,13 +462,17 @@ public class AllResourceConverterTest {
 
         Supplier<Stream<Bundle.BundleEntryComponent>> provenanceStreamSupplier = () -> getEntriesOfType(stu3Bundle, ResourceType.Provenance);
         assertProvenanceEntry(composition, newRequestWithNormalDosageFullUrl, newRequestWithNormalDosage, provenanceStreamSupplier,
-                "2017-04-06T00:00:00.000+0530", "CREATE", "create", null);
+                parseToDate("2017-04-06T00:00:00.000+0530"), "CREATE", "create", null);
         assertProvenanceEntry(composition, revisedRequestWithNormalDosageFullUrl, revisedRequestWithNormalDosage, provenanceStreamSupplier,
-                "2017-04-06T00:00:00.000+0530", "UPDATE", "revise", null);
+                parseToDate("2017-04-06T00:00:00.000+0530"), "UPDATE", "revise", null);
         assertProvenanceEntry(composition, newRequestWithCustomDosageFullUrl, newRequestWithCustomDosage, provenanceStreamSupplier,
-                "2017-04-06T00:00:00.000+0530", "CREATE", "create", "2017-04-04T14:41:19.000+0530");
+                parseToDate("2017-04-06T00:00:00.000+0530"), "CREATE", "create", parseToDate("2017-04-04T14:41:19.000+0530"));
         assertProvenanceEntry(composition, stoppedRequestWithCustomDosageFullUrl, stoppedRequestWithCustomDosage, provenanceStreamSupplier,
-                "2017-04-04T14:41:20.000+0530", "ABORT", "abort", "2017-04-04T14:41:19.000+0530");
+                parseToDate("2017-04-04T14:41:20.000+0530"), "ABORT", "abort", parseToDate("2017-04-04T14:41:19.000+0530"));
+    }
+
+    private Date parseToDate(String dateValue) {
+        return DateUtils.parseDate(dateValue, new String[]{"yyyy-MM-dd'T'HH:mm:ss.SSSZ"});
     }
 
     @Test
@@ -552,7 +557,7 @@ public class AllResourceConverterTest {
         assertEquals(trSystem, route.getSystem());
         assertEquals("_OralRoute", route.getCode());
 
-        Quantity doseQuantity = (Quantity)dosageInstruction.getDose();
+        Quantity doseQuantity = (Quantity) dosageInstruction.getDose();
         assertEquals(trSystem, doseQuantity.getSystem());
         assertEquals("385055001", doseQuantity.getCode());
         assertEquals("Tablet dose form", doseQuantity.getUnit());
@@ -592,7 +597,7 @@ public class AllResourceConverterTest {
         assertEquals(trSystem, route.getSystem());
         assertEquals("_OralRoute", route.getCode());
 
-        Quantity doseQuantity = (Quantity)dosageInstruction.getDose();
+        Quantity doseQuantity = (Quantity) dosageInstruction.getDose();
         assertEquals(trSystem, doseQuantity.getSystem());
         assertEquals("415703001", doseQuantity.getCode());
         assertEquals("Teaspoonful - unit of product", doseQuantity.getUnit());
@@ -640,8 +645,7 @@ public class AllResourceConverterTest {
 
     private void assertProvenanceEntry(Composition composition, String fullUrl, MedicationRequest medicationRequest,
                                        Supplier<Stream<Bundle.BundleEntryComponent>> provenanceStreamSupplier,
-                                       String startDate, String activityCode, String activityDisplay, Object endDate) throws FHIRException {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ");
+                                       Date startDate, String activityCode, String activityDisplay, Date endDate) throws FHIRException {
 
         Bundle.BundleEntryComponent provenanceEntry = getEntryByFullUrl(provenanceStreamSupplier, buildProvenanceEntryURL(fullUrl));
         Provenance provenance = (Provenance) provenanceEntry.getResource();
@@ -654,12 +658,13 @@ public class AllResourceConverterTest {
         assertEquals(activityDisplay, activity.getDisplay());
         assertEquals(medicationRequest.getAuthoredOn(), provenance.getRecorded());
         assertEquals(medicationRequest.getRequester().getAgent().getReference(), provenance.getAgentFirstRep().getWhoReference().getReference());
-
-        assertEquals(startDate, simpleDateFormat.format(provenance.getPeriod().getStart()));
+        java.util.Date actual = provenance.getPeriod().getStart();
+        System.out.println(actual);
+        assertEquals("Fails because " + startDate + "is not " + actual, startDate, actual);
         if (null == endDate) {
             assertNull(provenance.getPeriod().getEnd());
         } else {
-            assertEquals(endDate, simpleDateFormat.format(provenance.getPeriod().getEnd()));
+            assertEquals(endDate, provenance.getPeriod().getEnd());
         }
     }
 }
