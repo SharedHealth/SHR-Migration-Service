@@ -29,9 +29,10 @@ public class EncounterRepository {
         this.shrProperties = shrProperties;
     }
 
-    public void save(String stu3BundleContent, EncounterDetails encounterDetails) {
+    public void save(String stu3BundleContent, String dstu2BundleContent, EncounterDetails encounterDetails) {
         Update.Where update = QueryBuilder.update(ENCOUNTER_TABLE_NAME)
                 .with(set(getNewContentColumnName(), stu3BundleContent))
+                .and(set(getOldContentColumnName(), dstu2BundleContent))
                 .and(set(getNewContentVersionColumnName(), encounterDetails.getOldContentVersion()))
                 .where(eq(ENCOUNTER_ID_COLUMN_NAME, encounterDetails.getEncounterId()))
                 .and(eq(RECEIVED_AT_COLUMN_NAME, encounterDetails.getReceivedAt()));
@@ -42,6 +43,8 @@ public class EncounterRepository {
     private String getNewContentColumnName() {
         return "content_" + shrProperties.getFhirDocumentNewSchemaVersion();
     }
+
+    private String getOldContentColumnName() {return "content_" + shrProperties.getFhirDocumentOldSchemaVersion();}
 
     private String getNewContentVersionColumnName() {
         return "content_version_" + shrProperties.getFhirDocumentNewSchemaVersion();

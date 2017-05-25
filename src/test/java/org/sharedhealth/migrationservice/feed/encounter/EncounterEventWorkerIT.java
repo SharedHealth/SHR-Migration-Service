@@ -68,6 +68,39 @@ public class EncounterEventWorkerIT {
         assertEquals(afterUpdateFirstRow.getInt("content_version_v2"), afterUpdateFirstRow.getInt("content_version_v3"));
     }
 
+    @Test
+    public void shouldOverwriteTheContentOfOldColumnAsWell() throws Exception {
+        String encounterId = "shr-enc-1";
+        Insert insert = QueryBuilder.insertInto("encounter")
+                .value("encounter_id", encounterId)
+                .value("received_at", TimeUuidUtil.uuidForDate(new Date()))
+                .value("content_version_v2", 1)
+                .value("content_v2", "ABCD");
+
+        cqlOperations.execute(insert);
+
+        Select select = QueryBuilder.select().all().from("encounter");
+        List<Row> all = cqlOperations.query(select).all();
+        assertEquals(1, all.size());
+        Row firstRow = all.get(0);
+        assertEquals(encounterId, firstRow.getString("encounter_id"));
+        assertNull(firstRow.getString("content_v3"));
+        assertEquals("ABCD", firstRow.getString("content_v2"));
+
+        URL resource = this.getClass().getResource("/bundles/dstu2/bundle_with_encounter.xml");
+        String content = FileUtils.readFileToString(new File(resource.getFile()), "UTF-8");
+
+        encounterEventWorker.process(content, encounterId);
+
+        List<Row> afterUpdateAll = cqlOperations.query(QueryBuilder.select().all().from("encounter")).all();
+        assertEquals(1, afterUpdateAll.size());
+        Row afterUpdateFirstRow = afterUpdateAll.get(0);
+        assertEquals(encounterId, afterUpdateFirstRow.getString("encounter_id"));
+        assertNotNull(afterUpdateFirstRow.getString("content_v3"));
+        assertEquals(afterUpdateFirstRow.getInt("content_version_v2"), afterUpdateFirstRow.getInt("content_version_v3"));
+        assertEquals(content, afterUpdateFirstRow.getString("content_v2"));
+    }
+
 
     @After
     public void tearDown() throws Exception {

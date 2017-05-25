@@ -20,7 +20,7 @@ public class EncounterEventWorker {
     public void process(String dstu2Bundle, String encounterId) {
         EncounterDetails encounterDetails = encounterRepository.getByEncounterId(encounterId);
         String stu3Bundle = this.allResourceConverter.convertBundleToStu3(dstu2Bundle, encounterId);
-        encounterRepository.save(stu3Bundle, encounterDetails);
+        encounterRepository.save(stu3Bundle, dstu2Bundle, encounterDetails);
     }
 
 }
