@@ -129,7 +129,7 @@ public class ShrCatchmentEncounterFeedProcessorIT {
         Map<String, Object> failedEvent = failedEvents.get(0);
         assertEquals("Encounter:bc55a875-f163-4e79-aa53-9863f75b6ce3", failedEvent.get("title"));
         String eventContent = (String) failedEvent.get("event_content");
-        assertTrue(eventContent, eventContent.endsWith("/failed-bundles/Encounter:bc55a875-f163-4e79-aa53-9863f75b6ce3"));
+        assertTrue(eventContent, eventContent.endsWith("/failed-bundles/event:df41ae40-087c-11e7-9fea-667d3bb0eee2"));
     }
 
     @Test

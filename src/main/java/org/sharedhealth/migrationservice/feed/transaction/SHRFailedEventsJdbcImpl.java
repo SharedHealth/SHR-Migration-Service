@@ -38,7 +38,7 @@ public class SHRFailedEventsJdbcImpl extends AllFailedEventsJdbcImpl {
             super.addOrUpdate(failedEvent);
             return;
         }
-        File bundleFile = new File(bundleStorageDirPath, event.getTitle());
+        File bundleFile = new File(bundleStorageDirPath, "event:" + event.getId());
         try {
             FileUtils.writeStringToFile(bundleFile, content, "UTF-8");
         } catch (IOException e) {
@@ -65,6 +65,16 @@ public class SHRFailedEventsJdbcImpl extends AllFailedEventsJdbcImpl {
     public List<FailedEvent> getOldestNFailedEvents(String feedUri, int numberOfFailedEvents, int numberOfRetries) {
         return super.getOldestNFailedEvents(feedUri, numberOfFailedEvents, numberOfRetries).stream()
                 .map(this::replaceContentWithFileBundle).collect(Collectors.toList());
+    }
+
+    @Override
+    public void remove(FailedEvent failedEvent) {
+        String content = failedEvent.getEvent().getContent();
+        File failedBundleFilePath = new File(content);
+        if (!failedBundleFilePath.exists()) {
+            return;
+        }
+        super.remove(failedEvent);
     }
 
     private FailedEvent replaceContentWithFileBundle(FailedEvent failedEvent) {
