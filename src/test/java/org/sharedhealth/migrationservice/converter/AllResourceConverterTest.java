@@ -96,7 +96,7 @@ public class AllResourceConverterTest {
         assertEquals("http://www.pr.com/providers/812.json", chiefComplaint.getAsserter().getReference());
 
         Coding category = chiefComplaint.getCategoryFirstRep().getCodingFirstRep();
-        assertEquals("http://tr.com/valuesets/condition-category", category.getSystem());
+        assertEquals("http://tr.com/valuesets/Condition-Category", category.getSystem());
         assertEquals("complaint", category.getCode());
 
         assertEquals(ACTIVE, chiefComplaint.getClinicalStatus());
@@ -129,7 +129,7 @@ public class AllResourceConverterTest {
         assertEquals("http://www.pr.com/providers/812.json", diagnosis.getAsserter().getReference());
 
         Coding category = diagnosis.getCategoryFirstRep().getCodingFirstRep();
-        assertEquals("http://tr.com/valuesets/condition-category", category.getSystem());
+        assertEquals("http://tr.com/valuesets/Condition-Category", category.getSystem());
         assertEquals("diagnosis", category.getCode());
         assertEquals(CONFIRMED, diagnosis.getVerificationStatus());
 
@@ -365,7 +365,7 @@ public class AllResourceConverterTest {
         assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
         ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
         assertEquals(ORDER, procedureRequest.getIntent());
-        assertEquals("http://tr.com/valuesets/order-type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
+        assertEquals("http://tr.com/valuesets/Order-Type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
         assertEquals("PROCEDURE", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
         assertEquals("http://172.18.46.199:8081/api/v1/patients/98001175044", procedureRequest.getSubject().getReference());
         assertEquals("urn:uuid:763dee64-44d5-4820-b9c0-6c51bf1d3fa9", procedureRequest.getContext().getReference());
@@ -494,7 +494,7 @@ public class AllResourceConverterTest {
         streamSupplier.get().forEach(procedureRequestEntry -> {
             assertTrue(isPresentInCompositionSection(composition, procedureRequestEntry));
             ProcedureRequest procedureRequest = (ProcedureRequest) procedureRequestEntry.getResource();
-            assertEquals("http://tr.com/valuesets/order-type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
+            assertEquals("http://tr.com/valuesets/Order-Type", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getSystem());
             assertEquals("LAB", procedureRequest.getCategoryFirstRep().getCodingFirstRep().getCode());
             assertEquals("https://mci-showcase.twhosted.com/api/default/patients/98001541849", procedureRequest.getSubject().getReference());
             assertEquals("urn:uuid:8b993f2a-f5bc-4c42-b959-1080928c08ad", procedureRequest.getContext().getReference());

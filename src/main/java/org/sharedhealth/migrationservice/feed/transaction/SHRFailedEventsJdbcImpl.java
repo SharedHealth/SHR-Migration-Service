@@ -69,11 +69,9 @@ public class SHRFailedEventsJdbcImpl extends AllFailedEventsJdbcImpl {
 
     @Override
     public void remove(FailedEvent failedEvent) {
-        String content = failedEvent.getEvent().getContent();
-        File failedBundleFilePath = new File(content);
-        if (!failedBundleFilePath.exists()) {
-            return;
-        }
+        String storageDirPath = migrationProperties.getFailedBundleStorageDirPath();
+        File bundleFile = new File(storageDirPath, "event:" + failedEvent.getEvent().getId());
+        bundleFile.delete();
         super.remove(failedEvent);
     }
 

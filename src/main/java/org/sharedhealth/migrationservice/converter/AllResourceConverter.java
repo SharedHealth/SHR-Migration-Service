@@ -34,8 +34,8 @@ public class AllResourceConverter {
     private org.apache.logging.log4j.Logger logger = LogManager.getLogger(ShrCatchmentEncounterFeedProcessor.class);
 
     public final static String TR_PROCEDURE_ORDER_TYPE_CODE = "PROCEDURE";
-    public final static String TR_VALUESET_ORDER_TYPE_NAME = "order-type";
-    public final static String TR_VALUESET_CONDITION_CATEGORY_NAME = "condition-category";
+    public final static String TR_VALUESET_ORDER_TYPE_NAME = "Order-Type";
+    public final static String TR_VALUESET_CONDITION_CATEGORY_NAME = "Condition-Category";
     private final static String FHIR_VALUESET_CONDITION_CATEGORY_URL = "http://hl7.org/fhir/condition-category";
 
     private final static String MEDICATION_ORDER_ENTRY_DISPLAY = "Medication Order";
