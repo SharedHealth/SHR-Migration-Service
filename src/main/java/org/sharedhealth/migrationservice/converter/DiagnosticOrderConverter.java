@@ -41,9 +41,13 @@ public class DiagnosticOrderConverter {
                 extension.setUrl(DIAGNOSTIC_ORDER_R2_EXTENSION).setValue(new BooleanType(true));
 
                 List<org.hl7.fhir.dstu2.model.Identifier> identifier = diagnosticOrder.getIdentifier();
+
                 org.hl7.fhir.dstu2.model.Coding conceptCoding = getConceptCodingForDSTU2(item.getCode().getCoding());
-                String codeForConceptCoding = conceptCoding != null ? conceptCoding.getCode() : String.valueOf(count++);
-                String fullUrl = String.format("%s#%s", identifier.get(0).getValue(), codeForConceptCoding);
+                String identifierValue = identifier.get(0).getValue();
+                String fullUrl = conceptCoding != null
+                        ? String.format("%s#TR:%s", identifierValue, conceptCoding.getCode())
+                        : String.format("%s#LOCAL:%s", identifierValue, count++);
+
 
                 procedureRequest.addIdentifier().setValue(fullUrl);
                 procedureRequest.setId(fullUrl);

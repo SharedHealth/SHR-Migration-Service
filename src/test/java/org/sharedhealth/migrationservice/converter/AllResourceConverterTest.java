@@ -503,7 +503,7 @@ public class AllResourceConverterTest {
             assertEquals(ORDER, procedureRequest.getIntent());
         });
 
-        String fullUrl1 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#d10a0e4e-878d-11e5-95dd-005056b0145c";
+        String fullUrl1 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#TR:d10a0e4e-878d-11e5-95dd-005056b0145c";
         Bundle.BundleEntryComponent entry1 = getEntryByFullUrl(streamSupplier, fullUrl1);
         ProcedureRequest procedureRequest1 = (ProcedureRequest) entry1.getResource();
         assertEquals(fullUrl1, procedureRequest1.getIdentifierFirstRep().getValue());
@@ -511,7 +511,7 @@ public class AllResourceConverterTest {
         assertEquals(2, procedureRequest1.getCode().getCoding().size());
         assertEquals("Blood grouping", procedureRequest1.getCode().getCodingFirstRep().getDisplay());
 
-        String fullUrl2 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#d10653d5-878d-11e5-95dd-005056b0145c";
+        String fullUrl2 = "urn:uuid:b4576638-1b14-4f29-be92-dbd9c11c1609#TR:d10653d5-878d-11e5-95dd-005056b0145c";
         Bundle.BundleEntryComponent entry2 = getEntryByFullUrl(streamSupplier, fullUrl2);
         ProcedureRequest procedureRequest2 = (ProcedureRequest) entry2.getResource();
         assertEquals(fullUrl2, procedureRequest2.getIdentifierFirstRep().getValue());
